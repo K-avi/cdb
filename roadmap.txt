@@ -1,0 +1,11 @@
+Tests : 
+    - done atm
+Implementation : 
+    - Journal in memory will be first 
+
+
+TODO : 
+    - muti threaded and acid compliant journal / map 
+        - LWW policy 
+    - transaction module
+    - keep in mind the implem has to be as modular as possible for composition's sake  
