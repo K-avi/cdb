@@ -1,7 +1,13 @@
 Tests : 
     - done atm
+
+
 Implementation : 
-    - Journal in memory will be first 
+    - Map is first 
+        - Support for thread safe insert/remove/lookup first 
+        - Support for transaction later down the line 
+
+
 
 
 TODO : 
