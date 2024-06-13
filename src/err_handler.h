@@ -10,6 +10,7 @@ the enum of flags ; I might add stuff to it at some point.
 */
 typedef enum errflag_tS{   
     ERR_OK = 0, ERR_NULL , ERR_ALLOC, ERR_REALLOC, ERR_VALS, ERR_NOTNULL,  
+    ERR_PTHREAD_INIT, ERR_INVALID, ERR_MAPFULL,
 }flags ;
 
 

@@ -16,7 +16,10 @@ static inline char * str_flag(errflag_t flag){
     case ERR_REALLOC: return "couldn't reallocate memory";
     case ERR_VALS: return "value given not matching expected values";
     case ERR_NOTNULL: return "pointer is not null"; 
-    
+    case ERR_PTHREAD_INIT: return "pthread init failed";
+    case ERR_INVALID: return "invalid argument";
+    case ERR_MAPFULL : return "I swear I'll implement rehashing";
+  
     default : return "unknown error";
   }
 }//ok

@@ -36,7 +36,7 @@ initializes the fields of key_struct with the next timestamp from the generator
 and a copy of the key string
 */
 
-errflag_t key_destroy(s_key *key_struct);
+errflag_t key_free(s_key *key_struct);
 /*
 frees the fields of key_struct and zeroes them
 */

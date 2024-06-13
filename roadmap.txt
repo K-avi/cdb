@@ -4,9 +4,20 @@ Tests :
 
 Implementation : 
     - Map is first 
-        - Support for thread safe insert/remove/lookup first 
-        - Support for transaction later down the line 
+        - Hash bucket should be linked list w atomic pointers at the bucket level actually 
 
+
+should i use a 
+mapbucket** for the bucket list in the map 
+idk 
+on the one hand it fucks up mem proximity and stuff 
+on the other hand it makes my life easier 
+and enables efficient head insert 
+
+tbh now that I think about it, the best implem is prolly 
+a linked list of static arrays 
+
+fuck 
 
 
 
@@ -15,3 +26,4 @@ TODO :
         - LWW policy 
     - transaction module
     - keep in mind the implem has to be as modular as possible for composition's sake  
+    - custom allocator (if I want to make smtg scalable I WILL have to use this)
