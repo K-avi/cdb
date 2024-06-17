@@ -2,6 +2,7 @@
 #define cdb_map_h 
 
 #include "common.h"
+#include "err_handler.h"
 #include "key.h"
 #include "value.h"
 
@@ -63,6 +64,8 @@ fetches key from map and puts it in value_ret
 returns unknown value and initializes key to unknown value 
 on key not found
 */
+
+errflag_t map_free(s_map *map);
 
 #ifdef  debug
 void map_print(s_map *map);
