@@ -6,6 +6,8 @@
 #include "timestamp.h"
 
 
+extern uint64_t max_key_size;
+
 typedef struct s_key{
     char* key ; 
     timestamp_t ts ; 

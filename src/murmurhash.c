@@ -7,7 +7,12 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
+#include <sys/types.h>
 #include "murmurhash.h"
+
+
+#define DEFAULT_SEED 0
+uint32_t current_seed = DEFAULT_SEED; 
 
 uint32_t
 murmurhash (const char *key, uint32_t len, uint32_t seed) {

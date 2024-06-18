@@ -4,8 +4,7 @@ Tests :
 
 Implementation : 
     - Map is first 
-        - Hash bucket should be linked list w atomic pointers at the bucket level actually 
-
+        - test map primitives (locks are so much easier than atomics)
 
 should i use a 
 mapbucket** for the bucket list in the map 

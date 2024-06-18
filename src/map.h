@@ -6,11 +6,17 @@
 #include "key.h"
 #include "value.h"
 
+#include <bits/pthreadtypes.h>
+#include <pthread.h>
+
 
 typedef struct s_map_bucket{
 
     s_key *key; 
     s_value *value;
+
+    pthread_mutex_t lock; //friendship ended w atomic
+    //pthread_cond_t cond;
 
 }s_mapbucket; 
 
@@ -18,7 +24,7 @@ typedef struct s_map_bucket{
 
 typedef struct s_map{
     uint32_t nb_buckets; 
-    _Atomic(s_mapbucket) *buckets; //array of atomic buckets 
+    s_mapbucket *buckets; 
 }s_map; 
 /*
 Changed my mind ; will implement the map w linear probing resolution 
@@ -53,7 +59,7 @@ removes the key from the map if it exists;
 no op otherwise
 */
 
-errflag_t map_lookup(s_map *map, s_key *key, s_value *value_ret);
+errflag_t map_lookup(s_map *map, s_key *key, s_value **value_ret);
 /*
 map -> non null & initialized
 key -> non null & initialized 

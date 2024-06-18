@@ -23,6 +23,9 @@ extern "C" {
 uint32_t
 murmurhash (const char *, uint32_t, uint32_t);
 
+extern uint32_t current_seed;
+
+
 #ifdef __cplusplus
 }
 #endif

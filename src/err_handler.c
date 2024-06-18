@@ -19,6 +19,7 @@ static inline char * str_flag(errflag_t flag){
     case ERR_PTHREAD_INIT: return "pthread init failed";
     case ERR_INVALID: return "invalid argument";
     case ERR_MAPFULL : return "I swear I'll implement rehashing";
+    case ERR_NOTFOUND : return "element not found in map";
   
     default : return "unknown error";
   }
