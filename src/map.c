@@ -105,6 +105,9 @@ errflag_t map_insert(s_map *map, s_key *key, s_value *value){
         pthread_mutex_lock(&(head->lock));
 
         if(is_empty(head)){ 
+            head->flags &= ~EMPTY_FLAG;
+            head->flags &= ~TOMB_FLAG;
+
             failure = bucket_insert(head, key, value);
             error_handler(failure, "map_insert bucket_insert", failure, pthread_mutex_unlock(&(head->lock)););
             pthread_mutex_unlock(&(head->lock));
@@ -129,6 +132,9 @@ errflag_t map_insert(s_map *map, s_key *key, s_value *value){
 
         pthread_mutex_lock(&(head->lock));
         if(is_tombstone(head)){
+            head->flags &= ~EMPTY_FLAG;
+            head->flags &= ~TOMB_FLAG;
+
             failure = bucket_insert(head, key, value);
             error_handler(failure, "map_insert bucket_insert", failure,pthread_mutex_unlock(&(head->lock)););
             pthread_mutex_unlock(&(head->lock));
@@ -207,7 +213,7 @@ errflag_t map_lookup(s_map *map, s_key *key, s_value *value_ret){
     value_ret->val.u64 =  0 ;
 
     return ERR_OK;
-}//tested ; DOES NOT WORK 
+}//tested ; seems ok 
 //I don't like the fact that I lock the whole bucket list when I only need to lock the bucket I'm looking at
 
 errflag_t map_remove(s_map *map, s_key *key){
@@ -277,6 +283,7 @@ errflag_t map_delete_key(s_map *map, s_key *key){
 
     do{
         pthread_mutex_lock(&(head->lock));
+
         if (! (head->flags & (TOMB_FLAG | EMPTY_FLAG) ) ){ 
             if(!strncmp(head->head->key->key, key->key, key->key_size)){
                 s_mapbucket *bucket = head->head;
@@ -295,13 +302,16 @@ errflag_t map_delete_key(s_map *map, s_key *key){
         }
         pthread_mutex_unlock(&(head->lock));
 
-        start_index = (start_index + 1) % map->nb_buckets;
-        head = &(map->bucket_heads[start_index]);
+        bucket_index = (bucket_index + 1) % map->nb_buckets;
 
-    }while(bucket_index != start_index || !is_empty(head) );
+        if(bucket_index == start_index) break;
+
+        head = &(map->bucket_heads[bucket_index]);
+
+    }while( (bucket_index != start_index) || !is_empty(head) );
 
     return ERR_OK;
-}//tested; doesn't work 
+}//tested; seems ok 
 //deletes every key/value for the given key, whatever the timestamp
 
 errflag_t map_free(s_map *map){
@@ -310,11 +320,14 @@ errflag_t map_free(s_map *map){
 
     if(map->bucket_heads){
         for(uint32_t i = 0; i < map->nb_buckets; i++){
-            s_mapbucket *bucket = map->bucket_heads[i].head;
-            while(bucket){
-                s_mapbucket *next = bucket->next;
-                free_bucket(bucket);
-                bucket = next;              
+
+            if( ! (map->bucket_heads[i].flags & (TOMB_FLAG | EMPTY_FLAG))){
+                s_mapbucket *bucket = map->bucket_heads[i].head;
+                while(bucket){
+                    s_mapbucket *next = bucket->next;
+                    free_bucket(bucket);
+                    bucket = next;              
+                }
             }
             pthread_mutex_destroy(&(map->bucket_heads[i].lock));
         }
@@ -342,7 +355,12 @@ void map_print(s_map *map){
 
     for (uint32_t i = 0 ; i < map->nb_buckets; i++) {
         printf("bucket %u\n", i);
-        bucket_print(&(map->bucket_heads[i]));
+        if(map->bucket_heads[i].flags & (EMPTY_FLAG | TOMB_FLAG)){
+            printf("empty\n");
+          
+        }else{
+            bucket_print(&(map->bucket_heads[i]));
+        }
         printf("----------------\n");
     }
 }
