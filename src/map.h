@@ -8,6 +8,7 @@
 
 #include <bits/pthreadtypes.h>
 #include <pthread.h>
+#include <stdint.h>
 
 
 typedef struct s_map_bucket{
@@ -18,57 +19,58 @@ typedef struct s_map_bucket{
     pthread_mutex_t lock; //friendship ended w atomic
     //pthread_cond_t cond;
 
+    struct s_map_bucket *next;
 }s_mapbucket; 
 
 
+typedef struct s_bucketthead{
+    s_mapbucket *head; 
+    pthread_mutex_t lock;
+    uint8_t flags; //0x1 -> empty ; 0x2 -> tombstone 
+//named struct bc I might add stuff to it
+}s_buckethead;
 
 typedef struct s_map{
     uint32_t nb_buckets; 
-    s_mapbucket *buckets; 
+    s_buckethead *bucket_heads; 
 }s_map; 
 /*
-Changed my mind ; will implement the map w linear probing resolution 
-I'll deal w rehash later (I won't)
 */
 
 errflag_t map_init(uint32_t nb_buckets, s_map *map);
 /*
-s_map -> not null ; memleak on already initialized map
-nb_buckets -> non zero
+@param: s_map -> not null ; memleak on already initialized map
+@param: nb_buckets -> non zero
 
-initializes the map with nb_buckets buckets
+@returns: ERR_OK on success.
+@brief: initializes the map with nb_buckets buckets; allocates memory
 */
 
 errflag_t map_insert(s_map *map, s_key *key, s_value *value);
 /*
-map -> non null & initialized
-key -> non null & initialized 
-value -> non null & initialized
-thread safe 
+@param: map -> non null & initialized
+@param: key -> non null & initialized 
+@param: value -> non null & initialized
 
-inserts the key in the map 
+@brief: thread safe insertion of a duplicate of the key in the map. 
 */
 
 errflag_t map_remove(s_map *map, s_key *key);
 /*
-map -> non null & initialized
-key -> non null & initialized 
-thread safe 
-
-removes the key from the map if it exists; 
-no op otherwise
+@param: map -> non null & initialized
+@param: key -> non null & initialized 
+@brief: thread safe removal of the key from the map if the key exists; no op otherwise
 */
 
 errflag_t map_lookup(s_map *map, s_key *key, s_value **value_ret);
 /*
-map -> non null & initialized
-key -> non null & initialized 
-value_ret -> non null ; memleak on already initialized value_ret
+@param: map -> non null & initialized
+@param: key -> non null & initialized 
+@param: value_ret -> non null ; memleak on already initialized value_ret
 thread safe
 
-fetches key from map and puts it in value_ret
-returns unknown value and initializes key to unknown value 
-on key not found
+@brief: fetches the reference of the corresponding key to the value from the map and puts it in value_ret
+returns unknown value and initializes key to unknown value on key not found
 */
 
 errflag_t map_free(s_map *map);

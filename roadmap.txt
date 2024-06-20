@@ -1,7 +1,9 @@
 Tests : 
     - done atm
 
-
+the map should maintain some kind of linked list at each bucket for timestamps or smtg 
+I completely forgot about that 
+Why do I even need those smh 
 Implementation : 
     - Map is first 
         - test map primitives (locks are so much easier than atomics)

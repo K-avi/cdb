@@ -5,6 +5,9 @@ DEBUG := cdb_dbg
 BUILDPATH := target
 SRCS := $(wildcard src/*.c)
 
+
+CFLAGS := -Og -g -Wall -Wextra -Wpedantic -Wno-unused-parameter -std=gnu17
+
 .PHONY:	all clean
 
 all: $(TARGET)

@@ -48,6 +48,15 @@ errflag_t value_free(s_value *value_struct);
 free the fields of value_struct (if need be) and zeroes them 
 */
 
+errflag_t value_dup(s_value *src, s_value *dst); 
+/*
+@params: src -> non null ; initialized
+@params: dst -> non null 
+@returns: ERR_OK if successful, ERR_NULL if src or dst is NULL
+
+@brief : duplicates the value in src into dst; might allocate memory
+*/
+
 #ifdef debug 
 void value_print(s_value *value_struct);
 /*

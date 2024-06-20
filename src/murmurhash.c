@@ -10,7 +10,6 @@
 #include <sys/types.h>
 #include "murmurhash.h"
 
-
 #define DEFAULT_SEED 0
 uint32_t current_seed = DEFAULT_SEED; 
 
@@ -76,3 +75,5 @@ murmurhash (const char *key, uint32_t len, uint32_t seed) {
 
   return h;
 }
+
+
