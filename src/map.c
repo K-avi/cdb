@@ -113,12 +113,13 @@ errflag_t map_insert(s_map *map, s_key *key, s_value *value){
             pthread_mutex_unlock(&(head->lock));
             return ERR_OK;
         }
-
-        if(!strncmp(head->head->key->key, key->key, key->key_size)){
-            failure = bucket_insert(head, key, value);
-            error_handler(failure, "map_insert bucket_insert", failure, pthread_mutex_unlock(&(head->lock)););
-            pthread_mutex_unlock(&(head->lock));
-            return ERR_OK;
+        if(!is_tombstone(head)){
+            if(!strncmp(head->head->key->key, key->key, key->key_size)){
+                failure = bucket_insert(head, key, value);
+                error_handler(failure, "map_insert bucket_insert", failure, pthread_mutex_unlock(&(head->lock)););
+                pthread_mutex_unlock(&(head->lock));
+                return ERR_OK;
+            }
         }
 
         pthread_mutex_unlock(&(head->lock));
@@ -295,7 +296,7 @@ errflag_t map_delete_key(s_map *map, s_key *key){
                     bucket = next;
                 }
                 head->flags |= TOMB_FLAG;
-
+                head->head = NULL;
                 pthread_mutex_unlock(&(head->lock));
                 return ERR_OK;
             }       
