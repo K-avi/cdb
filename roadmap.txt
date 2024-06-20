@@ -1,5 +1,5 @@
 Tests : 
-    - done atm
+    - tested map; might require more testing idk
 
 
 The map is currently implemented as a weird mix between linear probing and chaining ; collisions are resolved w linear probing 
@@ -11,21 +11,15 @@ for the best theoritical / complexity / scalability
 I gues it also depends on the workload
 
 
+the timestamps might be wrong BC I might want to use 2 of them instead of one (shite)
+I'm NOT fixing this now; this will be a problem for future me 
+merge support :(
+
+
 Implementation : 
     - Map is first 
         - test map primitives (locks are so much easier than atomics)
 
-should i use a 
-mapbucket** for the bucket list in the map 
-idk 
-on the one hand it fucks up mem proximity and stuff 
-on the other hand it makes my life easier 
-and enables efficient head insert 
-
-tbh now that I think about it, the best implem is prolly 
-a linked list of static arrays 
-
-fuck 
 
 
 
