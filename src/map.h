@@ -59,14 +59,14 @@ errflag_t map_remove(s_map *map, s_key *key);
 /*
 @param: map -> non null & initialized
 @param: key -> non null & initialized 
-@brief: thread safe removal of the key from the map if the key exists; no op otherwise
+@brief: thread safe removal of the key from the map if the key exists at the timestamp given; no op otherwise
 */
 
-errflag_t map_lookup(s_map *map, s_key *key, s_value **value_ret);
+errflag_t map_lookup(s_map *map, s_key *key, s_value *value_ret);
 /*
 @param: map -> non null & initialized
 @param: key -> non null & initialized 
-@param: value_ret -> non null ; memleak on already initialized value_ret
+@param: value_ret -> non null ; memleak on already initialized value_ret; returns a COPY of the value in the map;
 thread safe
 
 @brief: fetches the reference of the corresponding key to the value from the map and puts it in value_ret
@@ -74,6 +74,18 @@ returns unknown value and initializes key to unknown value on key not found
 */
 
 errflag_t map_free(s_map *map);
+/*
+@param: map -> non null & initialized
+@brief: frees the map and all the keys and values in it 
+*/
+
+errflag_t map_delete_key(s_map *map, s_key *key);
+/*
+@param: map -> non null & initialized
+@param: key -> non null & initialized
+@brief: deletes every instance of the key in the map (whatever the timestamp) if it exists 
+no op otherwise
+*/
 
 #ifdef  debug
 void map_print(s_map *map);

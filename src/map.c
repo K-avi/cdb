@@ -26,6 +26,7 @@ errflag_t map_init(uint32_t nb_buckets, s_map *map){
 
     for(uint32_t i = 0; i < nb_buckets; i++){
         pthread_mutex_init(&(map->bucket_heads[i].lock), NULL);
+        map->bucket_heads[i].flags = EMPTY_FLAG;
     }
 
     return ERR_OK;
@@ -60,6 +61,9 @@ static void free_bucket(s_mapbucket *bucket){
     
     key_free(bucket->key); 
     value_free(bucket->value);
+
+    free(bucket->key);
+    free(bucket->value);
     pthread_mutex_destroy(&(bucket->lock));
 
     free(bucket);
@@ -99,16 +103,8 @@ errflag_t map_insert(s_map *map, s_key *key, s_value *value){
 
     do{
         pthread_mutex_lock(&(head->lock));
-       
-        if(!head->head){
-            failure = bucket_insert(head, key, value);
-            error_handler(failure, "map_insert bucket_insert", failure,  pthread_mutex_unlock(&(head->lock)););
-            pthread_mutex_unlock(&(head->lock));
-            return ERR_OK;
-        }
 
-        if(is_empty(head)){
-           
+        if(is_empty(head)){ 
             failure = bucket_insert(head, key, value);
             error_handler(failure, "map_insert bucket_insert", failure, pthread_mutex_unlock(&(head->lock)););
             pthread_mutex_unlock(&(head->lock));
@@ -152,21 +148,184 @@ errflag_t map_insert(s_map *map, s_key *key, s_value *value){
 // -> do smtg where u turn tombstones into empty buckets when a certain threshold is reached or smth
 //might have concurrency issues 
 
-errflag_t map_remove(s_map *map, s_key *key){
-    
-    return ERR_OK;
-}//not done
+errflag_t map_lookup(s_map *map, s_key *key, s_value *value_ret){
+    def_err_handler(!map, "map_lookup map", ERR_NULL);
+    def_err_handler(!key, "map_lookup key", ERR_NULL);
+    def_err_handler(!value_ret, "map_lookup value_ret", ERR_NULL);
 
-errflag_t map_lookup(s_map *map, s_key *key, s_value **value_ret){
+    uint32_t hashed_key = 0;
+    errflag_t failure = key_hash(key, &hashed_key);
+    def_err_handler(failure, "map_lookup key_hash", failure);
+
+    uint32_t bucket_index = hashed_key % map->nb_buckets;
+    uint32_t start_index = bucket_index;
+
+    s_buckethead *head = &(map->bucket_heads[bucket_index]);
+
+    do{
+        pthread_mutex_lock(&(head->lock));
+        if (! (head->flags & (TOMB_FLAG | EMPTY_FLAG) ) ){ 
+            if(!strncmp(head->head->key->key, key->key, key->key_size)){
+                //search the list for the closest timestamp to the one in the key
+
+                s_mapbucket *bucket = head->head;
+                //iterate to fetch the closest version to the one asked j'
+                while(bucket->key->ts > key->ts && bucket->next){
+                    //keys are sorted from highest to lowest timestamp bc of head insert
+                    //if this property is not respected, the function will not work 
+                    //however sorted insert in linked list is very easy so it should be a quick 
+                    //fix if need be
+                    if(bucket->next->key->ts <= key->ts){
+                        bucket = bucket->next;
+                        
+                        break;
+                    }
+                    bucket = bucket->next;
+                }
+
+                if(bucket->key->ts <= key->ts){
+                    failure = value_dup(bucket->value, value_ret);
+                    error_handler(failure, "map_lookup value_dup", failure, pthread_mutex_unlock(&(head->lock)););
+                    pthread_mutex_unlock(&(head->lock));
+                    return ERR_OK;
+                }
+
+                pthread_mutex_unlock(&(head->lock));
+                value_ret->as = UNKNOWKN;
+                value_ret->val.u64 =  0 ;
+
+                return ERR_OK;
+            }
+        }
+        pthread_mutex_unlock(&(head->lock));
+
+        start_index = (start_index + 1) % map->nb_buckets;
+        head = &(map->bucket_heads[start_index]);
+    }while(bucket_index != start_index || !is_empty(head) );
+
+    value_ret->as = UNKNOWKN;
+    value_ret->val.u64 =  0 ;
+
     return ERR_OK;
-}//not done
+}//tested ; DOES NOT WORK 
+//I don't like the fact that I lock the whole bucket list when I only need to lock the bucket I'm looking at
+
+errflag_t map_remove(s_map *map, s_key *key){
+    def_err_handler(!map, "map_remove map", ERR_NULL);
+    def_err_handler(!key, "map_remove key", ERR_NULL);
+
+    uint32_t hashed_key = 0;
+    errflag_t failure = key_hash(key, &hashed_key);
+    def_err_handler(failure, "map_remove key_hash", failure);
+
+    uint32_t bucket_index = hashed_key % map->nb_buckets;
+    uint32_t start_index = bucket_index;
+
+    s_buckethead *head = &(map->bucket_heads[bucket_index]);
+
+    do{
+        pthread_mutex_lock(&(head->lock));
+        if (!(head->flags & (TOMB_FLAG | EMPTY_FLAG) ) ){ 
+            if(!strncmp(head->head->key->key, key->key, key->key_size)){
+                s_mapbucket *bucket = head->head;
+                s_mapbucket *prev = NULL;
+
+                while(bucket){
+                    
+                    if(bucket->key->ts == key->ts){
+                        if(prev){
+                            prev->next = bucket->next;
+                        }else{
+                            head->head = bucket->next;
+
+                            if(!head->head){//set to tombstoen if the bucket list is empty after removal
+                                head->flags |= TOMB_FLAG;
+                            }
+                        }
+                        free_bucket(bucket);
+                        pthread_mutex_unlock(&(head->lock));
+                        return ERR_OK;
+                    }
+
+                    prev = bucket;
+                    bucket = bucket->next;
+                }
+            }
+        }
+        pthread_mutex_unlock(&(head->lock));
+
+        start_index = (start_index + 1) % map->nb_buckets;
+        head = &(map->bucket_heads[start_index]);
+
+    }while(bucket_index != start_index || !is_empty(head) );
+
+    return ERR_OK;
+}//not tested; should be ok; removes a key from the map if the key,timestamp pair exists
+
+errflag_t map_delete_key(s_map *map, s_key *key){
+    def_err_handler(!map, "map_delete_key map", ERR_NULL);
+    def_err_handler(!key, "map_delete_key", ERR_NULL);
+
+    uint32_t hashed_key = 0;
+    errflag_t failure = key_hash(key, &hashed_key);
+    def_err_handler(failure, "map_remove key_hash", failure);
+
+    uint32_t bucket_index = hashed_key % map->nb_buckets;
+    uint32_t start_index = bucket_index;
+
+    s_buckethead *head = &(map->bucket_heads[bucket_index]);
+
+    do{
+        pthread_mutex_lock(&(head->lock));
+        if (! (head->flags & (TOMB_FLAG | EMPTY_FLAG) ) ){ 
+            if(!strncmp(head->head->key->key, key->key, key->key_size)){
+                s_mapbucket *bucket = head->head;
+                s_mapbucket *next = NULL;
+
+                while(bucket){
+                    next = bucket->next;    
+                    free_bucket(bucket);        
+                    bucket = next;
+                }
+                head->flags |= TOMB_FLAG;
+
+                pthread_mutex_unlock(&(head->lock));
+                return ERR_OK;
+            }       
+        }
+        pthread_mutex_unlock(&(head->lock));
+
+        start_index = (start_index + 1) % map->nb_buckets;
+        head = &(map->bucket_heads[start_index]);
+
+    }while(bucket_index != start_index || !is_empty(head) );
+
+    return ERR_OK;
+}//tested; doesn't work 
+//deletes every key/value for the given key, whatever the timestamp
 
 errflag_t map_free(s_map *map){
+
+    if(!map) return ERR_OK;
+
+    if(map->bucket_heads){
+        for(uint32_t i = 0; i < map->nb_buckets; i++){
+            s_mapbucket *bucket = map->bucket_heads[i].head;
+            while(bucket){
+                s_mapbucket *next = bucket->next;
+                free_bucket(bucket);
+                bucket = next;              
+            }
+            pthread_mutex_destroy(&(map->bucket_heads[i].lock));
+        }
+    }
+    free(map->bucket_heads);
+    map->nb_buckets = 0 ; 
+    map->bucket_heads = NULL;
     return ERR_OK;
-}//not done
+}//tested; ok ; not thread safe; will break stuff if used while map is still being accessed by other threads
 
 #ifdef debug 
-
 static void bucket_print(s_buckethead *head){
     if(!head) return ; 
 

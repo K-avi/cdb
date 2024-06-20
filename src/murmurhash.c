@@ -54,8 +54,8 @@ murmurhash (const char *key, uint32_t len, uint32_t seed) {
 
   // remainder
   switch (len & 3) { // `len % 4'
-    case 3: k ^= (tail[2] << 16);
-    case 2: k ^= (tail[1] << 8);
+    case 3: k ^= (tail[2] << 16); 
+    case 2: k ^= (tail[1] << 8); 
 
     case 1:
       k ^= tail[0];
@@ -63,6 +63,7 @@ murmurhash (const char *key, uint32_t len, uint32_t seed) {
       k = (k << r1) | (k >> (32 - r1));
       k *= c2;
       h ^= k;
+      
   }
 
   h ^= len;

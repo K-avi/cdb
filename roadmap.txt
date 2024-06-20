@@ -1,9 +1,16 @@
 Tests : 
     - done atm
 
-the map should maintain some kind of linked list at each bucket for timestamps or smtg 
-I completely forgot about that 
-Why do I even need those smh 
+
+The map is currently implemented as a weird mix between linear probing and chaining ; collisions are resolved w linear probing 
+and multiple versions of the same key are chained in a single bucket 
+
+The versions are currently stored in a basic linked list bc it was very easy to implement. 
+It might be better to use a dynamic array for real life performance or an AVL like structure 
+for the best theoritical / complexity / scalability 
+I gues it also depends on the workload
+
+
 Implementation : 
     - Map is first 
         - test map primitives (locks are so much easier than atomics)

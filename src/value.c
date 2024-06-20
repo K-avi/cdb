@@ -65,16 +65,16 @@ void value_print(s_value *value_struct){
         printf("NULL\n");
         return;
     }
-    
+    printf("value: ");
     switch(value_struct->as){
         case UNKNOWKN:
             printf("UNKNOWN\n");
             break;
         case STR:
-            printf("%s\n", value_struct->val.str);
+            printf("str: %s\n", value_struct->val.str);
             break;
         case U64:
-            printf("%lu\n", value_struct->val.u64);
+            printf("u64: %lu\n", value_struct->val.u64);
             break;
     }
     return;
