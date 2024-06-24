@@ -7,6 +7,9 @@
 #include <pthread.h>
 #include <stdint.h>
 
+
+typedef uint8_t byte_t; 
+
 #define debug 
 
 #endif
