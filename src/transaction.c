@@ -5,7 +5,6 @@
 /*********************************STATIC DYNAMIC ARRAY MANIPULATION*********************************/
 /***************************************************************************************************/
 
-
 #define DEFAULT_KVP_DYNARR_SIZE 16
 uint32_t glob_kvp_dynarr_size = DEFAULT_KVP_DYNARR_SIZE;
 #define DEFAULT_KVP_REALLOC_COEFF 1.5
@@ -137,6 +136,8 @@ errflag_t transaction_init(s_transaction* txn){
     failure = txn_dynarr_init(&txn->txn_array, glob_txn_dynarr_size);
     error_handler(failure, "transaction_init txn_dynarr_init", failure, return failure;);
 
+    txn->flags = 0;
+
     return ERR_OK;
 }//not tested
 
@@ -149,33 +150,49 @@ void transaction_free(s_transaction* txn){
             kvp_dynarr_free(&txn->kvp_array);
         txn->kvp_array = (s_kvp_dynarr){0};
         txn->txn_array = (s_txn_dynarr){0};
+        txn->flags = 0;
     }
 }//not tested
+
+#define TXN_BEGIN 1
+#define TXN_COMMIT 2
+#define TXN_ABORT 4
 
 /*these three should be trivial*/
 errflag_t transaction_begin(s_transaction* txn){
     def_err_handler(!txn, "transaction_begin txn", ERR_NULL);
+    def_err_handler(txn->flags, "transaction_begin illegal op", ERR_VALS);
 
     errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_BEGIN);
     error_handler(failure, "transaction_begin txn_dynarr_append", failure, return failure;);
+
+    txn->flags |= TXN_BEGIN;
 
     return ERR_OK;
 }//not tested
 
 errflag_t transaction_commit(s_transaction* txn){
     def_err_handler(!txn, "transaction_commit txn", ERR_NULL);
+    def_err_handler( (txn->flags & (TXN_COMMIT | TXN_ABORT)), "transaction_commit illegal op already ended", ERR_VALS);
+    def_err_handler( !(txn->flags & TXN_BEGIN ), "transaction_commit illegal op no begin", ERR_VALS);
 
     errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_COMMIT);
     error_handler(failure, "transaction_commit txn_dynarr_append", failure, return failure;);
+
+    txn->flags |= TXN_COMMIT;
 
     return ERR_OK;
 }//not tested
 
 errflag_t transaction_abort(s_transaction* txn){
     def_err_handler(!txn, "transaction_abort txn", ERR_NULL);
+    def_err_handler( (txn->flags & (TXN_COMMIT | TXN_ABORT)), "transaction_commit illegal op already ended", ERR_VALS);
+    def_err_handler( !(txn->flags & TXN_BEGIN), "transaction_commit illegal op no begin", ERR_VALS);
 
     errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_ABORT);
     error_handler(failure, "transaction_abort txn_dynarr_append", failure, return failure;);
+
+    txn->flags |= TXN_ABORT;
 
     return ERR_OK;
 }//not tested
@@ -207,7 +224,9 @@ errflag_t transaction_delete(s_transaction* txn, s_key* key){
 void transaction_print(s_transaction* txn){
     if(txn){
         printf("Transaction:\n");
+        printf("flags: %x\n", txn->flags);
         printf("KVP Array:\n");
+        printf("Cur Size: %d\n", txn->kvp_array.cur_size);
         for(uint32_t i = 0; i < txn->kvp_array.cur_size; i++){
             printf("Key %d:\n", i);
             key_print(&txn->kvp_array.kvp_array[i].key);
@@ -215,6 +234,7 @@ void transaction_print(s_transaction* txn){
             value_print(&txn->kvp_array.kvp_array[i].value);
         }
         printf("Transaction Array:\n");
+        printf("Cur Size: %d\n", txn->txn_array.cur_size);
         for(uint32_t i = 0; i < txn->txn_array.cur_size; i++){
             printf("Op %d: %d\n", i, txn->txn_array.txn_array[i]);
         }

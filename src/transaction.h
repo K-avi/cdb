@@ -5,6 +5,7 @@
 #include "err_handler.h"
 #include "value.h"
 #include "key.h"
+#include <stdint.h>
 
 //VERY MUCH A WIP; JUST TRYING THINGS OUT ; MIGHT CHANGE A LOT 
 
@@ -48,6 +49,13 @@ typedef struct s_txn_dynarr{
 typedef struct s_transaction{
     s_txn_dynarr txn_array;
     s_kvp_dynarr kvp_array;
+
+    uint8_t flags; 
+    /*
+    b0 -> begin
+    b1 -> commit
+    b2 -> abort
+    */
 }s_transaction; 
 
 errflag_t transaction_init(s_transaction* txn);
@@ -58,10 +66,14 @@ errflag_t transaction_init(s_transaction* txn);
 memleak on already initialized txn
 */
 
-//idk tbh
+//idk tbh how do I make txn interact w stores ? god knows
 errflag_t transaction_begin(s_transaction* txn);
-
+/*
+@param: txn ; non null ; initialized transaction pointer
+@brief: appends a begin operation to the transaction buffer
+*/
 errflag_t transaction_commit(s_transaction* txn);
+
 errflag_t transaction_abort(s_transaction* txn);
 
 errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value);
@@ -73,9 +85,10 @@ errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value);
 errflag_t transaction_delete(s_transaction* txn, s_key* key);
 
 void transaction_free(s_transaction* txn);
-/*
 
-*/
+#ifdef debug 
+void transaction_print(s_transaction* txn);
+#endif
 
 
 #endif
