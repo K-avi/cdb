@@ -6,7 +6,7 @@
 #include <stdint.h>
 #include <string.h>
 
-
+#define DEFAULT_PAGE_SIZE 4096
 uint32_t glob_page_size = DEFAULT_PAGE_SIZE;
 
 static errflag_t journal_page_init(uint32_t page_size, s_journal_page *page){
@@ -30,7 +30,7 @@ static errflag_t journal_page_init(uint32_t page_size, s_journal_page *page){
     page->used = 0;
  
     return ERR_OK;
-}//not tested
+}//tested; seems ok 
 
 errflag_t journal_init (uint32_t page_size, s_journal *journal){
     def_err_handler(!journal, "journal_init journal", ERR_NULL);
@@ -38,7 +38,7 @@ errflag_t journal_init (uint32_t page_size, s_journal *journal){
         !page_size, 
         "journal_init page_size",
         ERR_VALS, 
-        errflag_t failure=journal_init(DEFAULT_PAGE_SIZE, journal); 
+        errflag_t failure = journal_init(DEFAULT_PAGE_SIZE, journal); 
         return failure;
     );//if page size is 0, set it to the default value and init w that value
     
@@ -48,12 +48,13 @@ errflag_t journal_init (uint32_t page_size, s_journal *journal){
     errflag_t failure = journal_page_init(page_size, journal->current_page);
     error_handler(failure, "journal_init journal_page_init", failure, free(journal->current_page););
 
+    journal->first_page = journal->current_page;
     journal->page_size = page_size;
     journal->filled_pages = NULL;
     pthread_mutex_init(&journal->lock_current_page,NULL);
     
     return ERR_OK;
-}//not tested;
+}//tested; ok
 
 
 static errflag_t journal_full_pages_append(s_journal *journal, s_journal_page *filled_page){
@@ -70,16 +71,14 @@ static errflag_t journal_full_pages_append(s_journal *journal, s_journal_page *f
     
     current->next = filled_page;
     return ERR_OK;
-}//not tested
+}//tested; ok 
 
 
 errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
     def_err_handler(!journal, "journal_add journal", ERR_NULL);
     def_err_handler(!entry, "journal_add entry", ERR_NULL);
 
-    def_err_handler(!entry->data, "journal_add entry data", ERR_NULL);
     def_err_handler(!entry->size, "journal_add entry size", ERR_VALS);
-
     def_err_handler(entry->size > glob_page_size, "journal_add size too large", ERR_VALS);
 
     pthread_mutex_lock(&journal->lock_current_page);
@@ -107,6 +106,59 @@ errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
 
     pthread_mutex_unlock(&journal->lock_current_page);
     return ERR_OK;
-}//not tested
+}//tested; seems ok ; more testing needed
 //doesnt support adding entries that are larger than the page size
 
+
+static void journal_page_free(s_journal_page *page){
+    if(page){
+        free(page->entries);
+        free(page->metadata);
+        free(page);
+    }
+}//ok
+
+void journal_free(s_journal *journal, uint8_t flags){
+
+    if(flags){
+        printf("flags are not supported yet\n");
+    }else{
+        if(journal){
+            s_journal_page *current = journal->first_page;
+            while(current){
+                s_journal_page *next = current->next;
+                journal_page_free(current);
+                current = next;
+            }
+            pthread_mutex_destroy(&journal->lock_current_page);
+        }
+    }
+}//tested; ok
+
+errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
+    return ERR_OK;
+}//not done 
+
+
+errflag_t journal_write(s_journal *journal, char *filename){
+    return ERR_OK;
+}//not done
+
+errflag_t journal_read(s_journal *journal, char *filename){
+    return ERR_OK;
+}//not done
+
+#ifdef debug
+static void journal_page_print(s_journal_page *page){
+    return;
+}//not done 
+
+void journal_print(s_journal *journal){
+    if(journal){
+        printf("page_size: %u\n", journal->page_size);
+        printf("current_page: %p\n", (void*)journal->current_page);
+        printf("first_page: %p\n", (void*)journal->first_page);
+        printf("filled_pages: %p\n", (void*)journal->filled_pages);
+    }
+}//not done
+#endif

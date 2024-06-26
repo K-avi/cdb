@@ -4,7 +4,9 @@
 #include "common.h"
 #include "err_handler.h"
 #include <stdint.h>
+#include "key.h"
 #include "timestamp.h"
+#include "value.h"
 /*
 a journal will be an in memory array 
 each array will contain a fixed number of effects ; 
@@ -33,7 +35,6 @@ typedef enum journal_op{
 //these are basically "opcode" for the journal entries
 //they will be used to determine what to do with the data 
 
-#define DEFAULT_PAGE_SIZE 4096
 extern uint32_t glob_page_size;
 
 typedef struct s_journal_metadata s_jmetadata;
@@ -47,7 +48,7 @@ typedef struct s_journal_metadata s_jmetadata;
 
 typedef struct s_journal_entry{
     uint32_t size;
-    byte_t data[];
+    byte_t *data;
 }s_journal_entry;
 
 typedef struct s_journal_metadata{
@@ -75,6 +76,7 @@ typedef struct s_journal{
     s_journal_page *current_page;
     pthread_mutex_t lock_current_page;
 
+    s_journal_page *first_page;
     s_journal_page *filled_pages;
     
 }s_journal;
@@ -97,7 +99,18 @@ errflag_t journal_add(s_journal *journal, s_journal_entry *entry);
 a new page will be created and the data will be added to it
 */
 
-errflag_t journal_free(s_journal *journal, uint8_t flags);
+errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret); 
+/*
+@param: journal -> non null ; initialized the journal that will be looked up
+@param: key -> non null ; initialized the key to look up in the journal
+
+@brief: thread safe lookup in the journal for the key ; if the key is found, a copy of the value will be returned in value_ret; 
+the lookup will try to fetch the latest value for the key
+
+probably the hardest function to implement
+*/
+
+void journal_free(s_journal *journal, uint8_t flags);
 /*
 @param : journal -> non null ; initialized
 
