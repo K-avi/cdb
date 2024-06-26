@@ -19,22 +19,6 @@ the abstract "journal object" will be the collection of files + the in memory ar
 the file format will (at first) be a simple binary dump of the array
 */
 
-//should cast the data as u8 before writing to disk
-//bc enums are untrustworthy
-typedef enum journal_op{
-    OP_NOOP = 0,
-    OP_BEGIN,
-    OP_COMMIT,
-    OP_ABORT,
-    OP_INSERT,
-    OP_REMOVE,
-    OP_UPDATE,
-    OP_LOOKUP,
-    OP_DELETE,
-}journal_op;
-//these are basically "opcode" for the journal entries
-//they will be used to determine what to do with the data 
-
 extern uint32_t glob_page_size;
 
 typedef struct s_journal_metadata s_jmetadata;

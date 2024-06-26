@@ -1,9 +1,6 @@
 #include "journal.h"
-#include "common.h"
-#include "err_handler.h"
+#include "transaction.h"
 
-#include <pthread.h>
-#include <stdint.h>
 #include <string.h>
 
 #define DEFAULT_PAGE_SIZE 4096
