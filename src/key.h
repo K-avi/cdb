@@ -23,26 +23,30 @@ typedef struct s_key{
 //I'm not sure if I should define the key manipulations functions here tbh 
 errflag_t key_init(char* key, timestamp_t ts, s_key *key_struct);
 /*
-key -> non null ; null terminated string
-ts -> timestamp 
-key_struct -> non null ; memleak on already initialized struct
+@param: key -> non null ; null terminated string the "value" of the key to store
+@param: ts -> the timestamp that will be assigned to the key
+@param: key_struct -> non null ; memleak on already initialized struct the key structure that will receive 
+a copy of the key string 
 
-initialises the fields of key_struct with a copy of key and ts
+@brief: initialises the fields of key_struct with a copy of key and ts
 */
 
 errflag_t key_create(char* key, s_timegen *generator, s_key *key_struct); 
 /*
-key -> non null ; null terminated string
-ts -> timestamp 
-key_struct -> non null ; memleak on already initialized struct
+@param: key -> non null ; null terminated string the "value" of the key to store
+@param: generator -> non null; initialized; the timestamp generator to get a valid timestamp from 
+@param: key_struct -> non null ; memleak on already initialized struct; the key_structure that will receive a timestamp/ 
+a copy of the key string
 
-initializes the fields of key_struct with the next timestamp from the generator 
+@brief: initializes the fields of key_struct with a new timestamp from the generator 
 and a copy of the key string
 */
 
 errflag_t key_free(s_key *key_struct);
 /*
-frees the fields of key_struct and zeroes them
+@param: key_struct -> whatever 
+
+@brief: frees the fields of key_struct and zeroes them
 */
 
 errflag_t key_duplicate(s_key *src, s_key *dst);

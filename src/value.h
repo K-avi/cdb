@@ -36,15 +36,16 @@ typedef struct s_value{
 
 errflag_t value_init(u_value val,  value_as as, s_value *value_struct);
 /*
-val -> initialized u_value (of whatever type)
-as -> the type of the value 
-value_struct -> non null ; possible memleak on already initialized struct
+@param: val -> initialized u_value (of whatever type)
+@param: as -> the type of the value 
+@param: value_struct -> non null ; possible memleak on already initialized struct
 
-initializes the fields of value_struct with a copy of val it's type
+@brief: initializes the fields of value_struct with a copy of val it's type
 */
 
 errflag_t value_free(s_value *value_struct);
 /*
+@param: any value pointer
 free the fields of value_struct (if need be) and zeroes them 
 */
 

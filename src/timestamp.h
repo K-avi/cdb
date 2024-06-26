@@ -13,28 +13,29 @@ typedef struct s_timestamp_generator{
 
 errflag_t init_timestamp_gen(s_timegen* generator); 
 /*
-non null generator pointer -> errflag_t
-initializes the timestamp generator 
+@param: generator ; non null ; non ititialized generator pointer
+@brief: initializes the timestamp generator ; memleak on already initialized generator
 */
 
 errflag_t get_timestamp(s_timegen* generator, timestamp_t* ts);
 /*
-non null & initialized generator , non null timestamp 
-returns a new timestamp in ts and increments the current time in generator
-(thread safe)
+@param: generator ; non null & initialized generator pointer ; the generator to get a timestamp from
+@param: ts ; non null ; the timestamp pointer to store the new timestamp in
+
+@brief: returns a new timestamp in ts and increments the current time in generator (thread safe)
 */
 
 errflag_t peek_timestamp(s_timegen* generator, timestamp_t* ts);
 /*
-non null & initialized generator , non null timestamp
-returns the current timestamp in ts 
-(thread safe)
+@param: generator ; non null & initialized generator pointer ; the generator to get a timestamp from
+@param: ts ; non null ; the timestamp pointer to store the current timestamp in
+
+@brief: returns the current timestamp in ts (thread safe)
 */
 
 errflag_t free_timestamp_gen(s_timegen* generator);
 /*
-destroys the content of the generator
-(not thread safe)
+@param: generator -> whatever
+@brief: destroys the content of the generator (not thread safe)
 */
-
 #endif 

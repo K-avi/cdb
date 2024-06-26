@@ -36,7 +36,8 @@ Optimisations :
      - better bucket implementations for the map (linked lists are bad )
      - better locking policy in the map 
 
-
+Details : 
+    - cleanup functions names / returns (free functions should return void; every function should start with the structure on which it operates...)
 
 
 Projet goal : 
