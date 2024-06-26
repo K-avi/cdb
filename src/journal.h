@@ -47,7 +47,7 @@ typedef struct s_journal_metadata s_jmetadata;
 
 typedef struct s_journal_entry{
     uint32_t size;
-    byte_t *data;
+    byte_t data[];
 }s_journal_entry;
 
 typedef struct s_journal_metadata{
@@ -61,7 +61,7 @@ typedef struct s_journal_metadata{
 typedef struct s_journal_page{
     uint32_t size;
     uint32_t used;
-    byte_t *entries;
+    byte_t *entries; //cast to s_journal_entry when accessed
     s_jmetadata *metadata;
 
     struct s_journal_page *next;

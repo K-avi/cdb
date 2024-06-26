@@ -17,10 +17,19 @@ merge support :(
 
 
 Implementation : 
-    - Map is first 
-        - test map primitives (locks are so much easier than atomics)
 
+    Done : 
 
+        - Map (needs more testing)
+         
+    Not done : 
+        - journal
+
+        - transaction 
+
+        - Bloom Filter 
+
+        - composition 
 
 
 TODO : 
