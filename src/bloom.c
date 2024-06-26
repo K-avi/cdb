@@ -135,12 +135,9 @@ void bloom_print(s_bloom_filter *filter){
         printf("nb_hashes: %u\n", filter->nb_hashes);
         printf("bloom_size: %u\n", filter->bloom_size);
         printf("filter: ");
-        for(uint32_t i = 0; i < filter->bloom_size; i++){
-           
+        for(uint32_t i = 0; i < filter->bloom_size; i++){        
             printf("%2.2x", filter->filter[i]);
             printf(" ");
-            
-
         }
         printf("\n");
     }

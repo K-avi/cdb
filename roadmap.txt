@@ -27,14 +27,20 @@ Implementation :
 
         - transaction 
 
-        - Bloom Filter 
-
         - composition 
 
 
-TODO : 
+Optimisations : 
+
+     - mempool/arena/allocator (necessary if I want ANY performance / scalability )
+     - better bucket implementations for the map (linked lists are bad )
+     - better locking policy in the map 
+
+
+
+
+Projet goal : 
     - muti threaded and acid compliant journal / map 
         - LWW policy 
-    - transaction module
     - keep in mind the implem has to be as modular as possible for composition's sake  
-    - custom allocator (if I want to make smtg scalable I WILL have to use this)
+    - see https://theses.hal.science/tel-04291337/document for more informations
