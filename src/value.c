@@ -1,4 +1,5 @@
 #include "value.h"
+#include "common.h"
 #include "err_handler.h"
 #include <string.h>
 
@@ -73,6 +74,56 @@ errflag_t value_dup(s_value *src, s_value *dst){
     
     return ERR_OK;
 }//tested; ok; just a simple copy of the struct 
+
+errflag_t value_to_byte_array(s_value* value, s_byte_array* barray){
+    def_err_handler(!value, "value_to_byte_array value", ERR_NULL);
+    def_err_handler(!barray, "value_to_byte_array barray", ERR_NULL);
+    
+    uint32_t size = value->value_size + sizeof(value_as) + sizeof(uint32_t);
+    def_err_handler(size > barray->max, "value_to_byte_array size", ERR_VALS);
+
+    barray->cur = size;
+
+    memcpy(barray->data, &value->as, sizeof(value_as));
+    memcpy(barray->data + sizeof(value_as), &value->value_size, sizeof(uint32_t));
+
+    switch (value->as) {
+        case STR:
+            memcpy(barray->data + sizeof(value_as) + sizeof(uint32_t), value->val.str, value->value_size);
+            break;
+        case U64:
+            memcpy(barray->data + sizeof(value_as) + sizeof(uint32_t), &value->val.u64, value->value_size);
+            break;
+        case UNKNOWKN:
+            break;
+        default:
+            def_err_handler(ERR_VALS, "value_to_byte_array", ERR_VALS);
+    }
+    return ERR_OK;
+}//not tested; might be wrong
+
+errflag_t value_from_byte_array(s_value* value, s_byte_array* barray){
+    def_err_handler(!value, "value_from_byte_array value", ERR_NULL);
+    def_err_handler(!barray, "value_from_byte_array barray", ERR_NULL);
+    
+    memcpy(&value->as, barray->data, sizeof(value_as));
+    memcpy(&value->value_size, barray->data + sizeof(value_as), sizeof(uint32_t));
+
+    switch (value->as) {
+        case STR:
+            value->val.str = strndup((char*)barray->data + sizeof(value_as) + sizeof(uint32_t), value->value_size);
+            break;
+        case U64:
+            memcpy(&value->val.u64, barray->data + sizeof(value_as) + sizeof(uint32_t), value->value_size);
+            break;
+        case UNKNOWKN:
+            break;
+        default:
+            def_err_handler(ERR_VALS, "value_from_byte_array", ERR_VALS);
+    }
+    return ERR_OK;
+}//not tested; might be wrong
+
 
 #ifdef debug 
 void value_print(s_value *value_struct){

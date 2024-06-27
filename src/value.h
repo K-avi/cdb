@@ -59,6 +59,17 @@ errflag_t value_dup(s_value *src, s_value *dst);
 @brief : duplicates the value in src into dst; might allocate memory
 */
 
+errflag_t value_to_byte_array(s_value* value, s_byte_array* barray);
+/*
+@param: value -> initialized & non null value to convert to byte array
+@param: byte_array -> non null ; initialized error if byte_array->max < value->value_size + sizeof(as) + sizeof(uint32_t)
+
+@brief: converts the value into a byte array
+*/
+errflag_t value_from_byte_array(s_value* value, s_byte_array* barray);
+/*
+*/
+
 #ifdef debug 
 void value_print(s_value *value_struct);
 /*

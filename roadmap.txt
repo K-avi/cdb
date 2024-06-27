@@ -1,3 +1,10 @@
+WHY DO THE VALUES NOT HAVE TIMESTAMPS 
+WHY 
+WHY AM I SO STUPID 
+HOW 
+WHY 
+
+
 Tests : 
     - tested map; might require more testing idk
 
@@ -24,8 +31,8 @@ Implementation :
          
     Not done : 
         - journal
-
         - transaction 
+            -> I need to create the bytecode to write transactions to the journal. This is annoying
 
         - composition 
 

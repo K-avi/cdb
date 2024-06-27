@@ -69,7 +69,7 @@ errflag_t key_hash(s_key *key, uint32_t* hashed_key);
 errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array);
 /*
 @param: key -> initialized & non null key to convert to byte array
-@param: byte_array -> non null ; memleak on already initialized struct; the byte array that will receive the key
+@param: byte_array -> non null ; initialized error if byte_array->max < key->key_size + sizeof(timestamp_t) + sizeof(uint32_t)
 
 @brief: converts the key into a byte array
 */

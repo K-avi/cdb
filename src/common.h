@@ -11,7 +11,8 @@
 typedef uint8_t byte_t; 
 
 typedef struct s_byte_array{
-    uint32_t size;
+    uint32_t max;
+    uint32_t cur; 
     byte_t* data;
 }s_byte_array;
 

@@ -74,8 +74,11 @@ errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array){
     def_err_handler(!key, "key_to_byte_array key", ERR_NULL);
     def_err_handler(!byte_array, "key_to_byte_array byte_array", ERR_NULL);
     
-    byte_array->size =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t);;
-    byte_array->data = malloc(byte_array->size);
+    
+    uint32_t size =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t);
+    def_err_handler(size > byte_array->max, "key_to_byte_array size", ERR_VALS);
+
+    byte_array->cur = size ;
 
     memcpy(byte_array->data, &key->key_size, sizeof(uint32_t));
     memcpy(byte_array->data + sizeof(uint32_t), &key->ts, sizeof(timestamp_t));
@@ -91,7 +94,7 @@ errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array){
     
     key->key_size = *(uint32_t*)byte_array->data;
     key->ts = *(timestamp_t*)(byte_array->data + sizeof(uint32_t));
-    key->key = strndup(byte_array->data + sizeof(uint32_t) + sizeof(timestamp_t), key->key_size);
+    key->key = strndup((char*)byte_array->data + sizeof(uint32_t) + sizeof(timestamp_t), key->key_size);
     
     return ERR_OK;
 }//tested; seems ok
