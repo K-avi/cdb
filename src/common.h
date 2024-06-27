@@ -10,6 +10,11 @@
 
 typedef uint8_t byte_t; 
 
+typedef struct s_byte_array{
+    uint32_t size;
+    byte_t* data;
+}s_byte_array;
+
 #define debug 
 
 #endif

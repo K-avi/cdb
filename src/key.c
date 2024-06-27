@@ -1,4 +1,5 @@
 #include "key.h"
+#include "common.h"
 #include "err_handler.h"
 #include "murmurhash.h"
 #include "timestamp.h"
@@ -68,6 +69,32 @@ errflag_t key_hash(s_key *key, uint32_t* hashed_key){
  
     return ERR_OK;
 }//not tested; should be ok
+
+errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array){
+    def_err_handler(!key, "key_to_byte_array key", ERR_NULL);
+    def_err_handler(!byte_array, "key_to_byte_array byte_array", ERR_NULL);
+    
+    byte_array->size =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t);;
+    byte_array->data = malloc(byte_array->size);
+
+    memcpy(byte_array->data, &key->key_size, sizeof(uint32_t));
+    memcpy(byte_array->data + sizeof(uint32_t), &key->ts, sizeof(timestamp_t));
+
+    memcpy(byte_array->data + sizeof(uint32_t) + sizeof(timestamp_t), key->key, key->key_size);
+    
+    return ERR_OK;
+}// tested; seems ok
+
+errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array){
+    def_err_handler(!key, "key_from_byte_array key", ERR_NULL);
+    def_err_handler(!byte_array, "key_from_byte_array byte_array", ERR_NULL);
+    
+    key->key_size = *(uint32_t*)byte_array->data;
+    key->ts = *(timestamp_t*)(byte_array->data + sizeof(uint32_t));
+    key->key = strndup(byte_array->data + sizeof(uint32_t) + sizeof(timestamp_t), key->key_size);
+    
+    return ERR_OK;
+}//tested; seems ok
 
 
 #ifdef debug

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "err_handler.h"
+#include "timestamp.h"
 #include "value.h"
 #include "key.h"
 #include <stdint.h>
@@ -29,6 +30,20 @@ a bytecode for the transaction
 each op is followed by some data and so on
 */
 
+
+/*
+
+bytecode format: 
+
+op | txn_id | key_size |  key_timestamp | key_string | value_size | value_type | value_data
+key_size and so on are optionnal. 
+
+I will have to assume that key_size is 4 bytes , key_timestamp is 8 bytes , 
+value_size is 4 bytes and value_type is 1 byte.
+
+the size of the key/value_data can be whatever
+*/
+
 typedef struct s_key_value_pair{
     s_key key;
     s_value value;
@@ -50,7 +65,9 @@ typedef struct s_transaction{
     s_txn_dynarr txn_array;
     s_kvp_dynarr kvp_array;
 
-    uint8_t flags; 
+    uint32_t txn_id;
+
+    uint8_t flags; //flags allow to ensure that the transaction is in a valid state (no operation after commit/abort or before begin)
     /*
     b0 -> begin
     b1 -> commit
@@ -67,7 +84,7 @@ memleak on already initialized txn
 */
 
 //idk tbh how do I make txn interact w stores ? god knows
-errflag_t transaction_begin(s_transaction* txn);
+errflag_t transaction_begin(s_transaction* txn, uint32_t txn_id);
 /*
 @param: txn ; non null ; initialized transaction pointer
 @brief: appends a begin operation to the transaction buffer

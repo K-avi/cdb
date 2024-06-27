@@ -139,7 +139,7 @@ errflag_t transaction_init(s_transaction* txn){
     txn->flags = 0;
 
     return ERR_OK;
-}//not tested
+}//tested;ok
 
 void transaction_free(s_transaction* txn){
     if(txn){
@@ -152,24 +152,28 @@ void transaction_free(s_transaction* txn){
         txn->txn_array = (s_txn_dynarr){0};
         txn->flags = 0;
     }
-}//not tested
+}//tested; ok
 
 #define TXN_BEGIN 1
 #define TXN_COMMIT 2
 #define TXN_ABORT 4
 
 /*these three should be trivial*/
-errflag_t transaction_begin(s_transaction* txn){
+errflag_t transaction_begin(s_transaction* txn, uint32_t txn_id){
     def_err_handler(!txn, "transaction_begin txn", ERR_NULL);
     def_err_handler(txn->flags, "transaction_begin illegal op", ERR_VALS);
 
     errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_BEGIN);
-    error_handler(failure, "transaction_begin txn_dynarr_append", failure, return failure;);
+    def_err_handler(failure, "transaction_begin txn_dynarr_append", failure);
+
+    failure = txn_dynarr_append(&txn->txn_array, txn_id);
+    def_err_handler(failure, "transaction_begin txn_dynarr_append", failure);
 
     txn->flags |= TXN_BEGIN;
+    txn->txn_id = txn_id;
 
     return ERR_OK;
-}//not tested
+}//tested;ok
 
 errflag_t transaction_commit(s_transaction* txn){
     def_err_handler(!txn, "transaction_commit txn", ERR_NULL);
@@ -179,10 +183,13 @@ errflag_t transaction_commit(s_transaction* txn){
     errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_COMMIT);
     error_handler(failure, "transaction_commit txn_dynarr_append", failure, return failure;);
 
+    failure = txn_dynarr_append(&txn->txn_array, txn->txn_id);
+    def_err_handler(failure, "transaction_commit txn_dynarr_append", failure);
+
     txn->flags |= TXN_COMMIT;
 
     return ERR_OK;
-}//not tested
+}// tested;ok
 
 errflag_t transaction_abort(s_transaction* txn){
     def_err_handler(!txn, "transaction_abort txn", ERR_NULL);
@@ -192,6 +199,9 @@ errflag_t transaction_abort(s_transaction* txn){
     errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_ABORT);
     error_handler(failure, "transaction_abort txn_dynarr_append", failure, return failure;);
 
+    failure = txn_dynarr_append(&txn->txn_array, txn->txn_id);
+    def_err_handler(failure, "transaction_abort txn_dynarr_append", failure);
+
     txn->flags |= TXN_ABORT;
 
     return ERR_OK;
@@ -199,6 +209,25 @@ errflag_t transaction_abort(s_transaction* txn){
 
 /******these are gonna be a pain*/
 errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
+    def_err_handler(!txn, "transaction_insert txn", ERR_NULL);
+    def_err_handler(!key, "transaction_insert key", ERR_NULL);
+    def_err_handler(!value, "transaction_insert value", ERR_NULL);
+    def_err_handler(!(txn->flags & TXN_BEGIN), "transaction_insert illegal op no begin", ERR_VALS);
+    def_err_handler( (txn->flags & (TXN_COMMIT | TXN_ABORT)), "transaction_commit illegal op already ended", ERR_VALS);
+
+    errflag_t failure = kvp_dynarr_append(&txn->kvp_array, key, value);
+    def_err_handler(failure, "transaction_insert kvp_dynarr_append", failure);
+
+    failure = txn_dynarr_append(&txn->txn_array, OP_INSERT);
+    def_err_handler(failure, "transaction_insert kvp_dynarr_append", failure);
+
+    failure = txn_dynarr_append(&txn->txn_array, txn->txn_id);
+    def_err_handler(failure, "transaction_insert txn_dynarr_append", failure);
+
+    //I should support a way to write the key and value to the transaction array as well
+    //I will have to be careful. It shouldn't be hard (it's writing to a byte array after all) 
+    //but if I get this wrong I will be in trouble
+
     return ERR_OK;
 }//not done
 
@@ -236,8 +265,9 @@ void transaction_print(s_transaction* txn){
         printf("Transaction Array:\n");
         printf("Cur Size: %d\n", txn->txn_array.cur_size);
         for(uint32_t i = 0; i < txn->txn_array.cur_size; i++){
-            printf("Op %d: %d\n", i, txn->txn_array.txn_array[i]);
+            printf("%2.2x",  txn->txn_array.txn_array[i]);
         }
+        printf("\n");
     }
 }
 #endif

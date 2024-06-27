@@ -26,8 +26,9 @@ simple enum for the types
 
 
 typedef struct s_value{
-    u_value val;
+    uint32_t value_size;
     value_as as; //maybe changing the order is better for the weird padding stuff idk 
+    u_value val;
 } s_value;
 //a value is simply an union containing the data, and the type you should cast the data as
 //my issue with using strings is that you store a pointer and not the data but it shouldn't be too much 

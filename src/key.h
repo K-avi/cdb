@@ -10,9 +10,9 @@
 extern uint64_t max_key_size;
 
 typedef struct s_key{
-    char* key ; 
     uint32_t key_size;
     timestamp_t ts ; 
+    char* key ; 
 }s_key; 
 //a key is "theoretically" just the char* part 
 //but the timestamp is used to access a key anyways 
@@ -64,6 +64,21 @@ errflag_t key_hash(s_key *key, uint32_t* hashed_key);
 @param hashed_key: non null ; initialized ; the hashed key will be returned in this variable 
 
 @brief: hashes the key into hashed_key
+*/
+
+errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array);
+/*
+@param: key -> initialized & non null key to convert to byte array
+@param: byte_array -> non null ; memleak on already initialized struct; the byte array that will receive the key
+
+@brief: converts the key into a byte array
+*/
+errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array);
+/*
+@param: key -> non null ; memleak on already initialized struct; the key that will receive the data from the byte array
+@param: byte_array -> non null ; initialized; the byte array that contains the data to convert to a key
+
+@brief: converts the byte array into a key
 */
 
 #ifdef debug 

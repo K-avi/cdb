@@ -8,6 +8,20 @@ errflag_t value_init(u_value val,  value_as as, s_value *value_struct){
     value_struct->val = val;
     value_struct->as = as;
     
+    switch(as){
+        case  UNKNOWKN:
+            value_struct->value_size = 0;
+            break;
+        case STR:
+            value_struct->value_size = strlen(val.str);
+            break;
+        case U64:
+            value_struct->value_size = sizeof(uint64_t);
+            break;
+        default: 
+            def_err_handler(ERR_VALS, "value_init", ERR_VALS); 
+    }
+    
     return ERR_OK;
 }//tested; ok;
 
@@ -55,6 +69,7 @@ errflag_t value_dup(s_value *src, s_value *dst){
     
     dst->as = src->as;
     dst->val = dup_tab[src->as](src->val);
+    dst->value_size = src->value_size;
     
     return ERR_OK;
 }//tested; ok; just a simple copy of the struct 

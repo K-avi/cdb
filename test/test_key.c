@@ -1,5 +1,6 @@
 #include "../src/key.h"
 #include <pthread.h>
+#include <stdint.h>
 
 
 void * test_key_create(void* arg){
@@ -32,6 +33,21 @@ int main(void){
         pthread_join(thread_tab[i], NULL);
     }
 
+
+    s_key dummy_key ;
+    key_init("testingwow", UINT64_MAX, &dummy_key);
+
+    s_byte_array byte_array;
+    key_to_byte_array(&dummy_key, &byte_array);
+
+    s_key new_key;
+    key_from_byte_array(&new_key, &byte_array);
+
+    key_print(&new_key);
+
+    key_free(&dummy_key);
+    key_free(&new_key);
+    free(byte_array.data);
     free_timestamp_gen(&timegen);
 
     return 0;
