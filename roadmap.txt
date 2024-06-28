@@ -1,13 +1,8 @@
-WHY DO THE VALUES NOT HAVE TIMESTAMPS 
-WHY 
-WHY AM I SO STUPID 
-HOW 
-WHY 
+map bucket implementation is stupid. I'll rework it. 
 
 
 Tests : 
     - tested map; might require more testing idk
-
 
 The map is currently implemented as a weird mix between linear probing and chaining ; collisions are resolved w linear probing 
 and multiple versions of the same key are chained in a single bucket 
@@ -17,11 +12,9 @@ It might be better to use a dynamic array for real life performance or an AVL li
 for the best theoritical / complexity / scalability 
 I gues it also depends on the workload
 
-
 the timestamps might be wrong BC I might want to use 2 of them instead of one (shite)
 I'm NOT fixing this now; this will be a problem for future me 
 merge support :(
-
 
 Implementation : 
 
@@ -48,7 +41,7 @@ Details :
     - cleanup functions names / returns (free functions should return void; every function should start with the structure on which it operates...)
 
 
-Projet goal : 
+Project goal : 
     - muti threaded and acid compliant journal / map 
         - LWW policy 
     - keep in mind the implem has to be as modular as possible for composition's sake  

@@ -3,6 +3,7 @@
 
 #include "common.h"
 #include "err_handler.h"
+#include "timestamp.h"
 
 
 typedef union u_value{
@@ -27,6 +28,7 @@ simple enum for the types
 
 typedef struct s_value{
     uint32_t value_size;
+    timestamp_t ts;
     value_as as; //maybe changing the order is better for the weird padding stuff idk 
     u_value val;
 } s_value;
@@ -35,7 +37,7 @@ typedef struct s_value{
 //of a problem
 
 
-errflag_t value_init(u_value val,  value_as as, s_value *value_struct);
+errflag_t value_init(u_value val,  value_as as, s_value *value_struct, timestamp_t ts);
 /*
 @param: val -> initialized u_value (of whatever type)
 @param: as -> the type of the value 

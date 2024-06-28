@@ -1,13 +1,16 @@
 #include "value.h"
 #include "common.h"
 #include "err_handler.h"
+#include "timestamp.h"
+#include <stdint.h>
 #include <string.h>
 
-errflag_t value_init(u_value val,  value_as as, s_value *value_struct){
+errflag_t value_init(u_value val,  value_as as, s_value *value_struct, timestamp_t ts){
     def_err_handler(!value_struct, "value_init value_struct", ERR_NULL);
     
     value_struct->val = val;
     value_struct->as = as;
+    value_struct->ts = ts;
     
     switch(as){
         case  UNKNOWKN:
@@ -44,6 +47,11 @@ static free_value_fn free_tab[] = {
 errflag_t value_free(s_value *value_struct){
     def_err_handler(!value_struct, "value_destroy", ERR_NULL);
     free_tab[value_struct->as]((value_struct->val));
+    value_struct->value_size = 0;
+    value_struct->as = UNKNOWKN;
+    value_struct->ts = 0;
+    value_struct->val.u64 = 0;
+
     return ERR_OK;
 }//tested; ok; basically just a wrapper for the function pointer
 
@@ -71,7 +79,8 @@ errflag_t value_dup(s_value *src, s_value *dst){
     dst->as = src->as;
     dst->val = dup_tab[src->as](src->val);
     dst->value_size = src->value_size;
-    
+    dst->ts = src->ts;
+
     return ERR_OK;
 }//tested; ok; just a simple copy of the struct 
 
@@ -79,20 +88,27 @@ errflag_t value_to_byte_array(s_value* value, s_byte_array* barray){
     def_err_handler(!value, "value_to_byte_array value", ERR_NULL);
     def_err_handler(!barray, "value_to_byte_array barray", ERR_NULL);
     
-    uint32_t size = value->value_size + sizeof(value_as) + sizeof(uint32_t);
+    uint32_t size = value->value_size + sizeof(value_as) + sizeof(uint32_t)+sizeof(timestamp_t);
     def_err_handler(size > barray->max, "value_to_byte_array size", ERR_VALS);
 
     barray->cur = size;
 
-    memcpy(barray->data, &value->as, sizeof(value_as));
-    memcpy(barray->data + sizeof(value_as), &value->value_size, sizeof(uint32_t));
+    uint8_t *cur = barray->data;
+
+    memcpy(cur, &value->as, sizeof(value_as));
+    cur+=sizeof(value_as);
+    memcpy(cur, &value->ts, sizeof(timestamp_t));
+
+    cur+=sizeof(timestamp_t);
+    memcpy(cur, &value->value_size, sizeof(uint32_t));
+    cur+=sizeof(uint32_t);
 
     switch (value->as) {
         case STR:
-            memcpy(barray->data + sizeof(value_as) + sizeof(uint32_t), value->val.str, value->value_size);
+            memcpy(cur, value->val.str, value->value_size);
             break;
         case U64:
-            memcpy(barray->data + sizeof(value_as) + sizeof(uint32_t), &value->val.u64, value->value_size);
+            memcpy(cur, &value->val.u64, value->value_size);
             break;
         case UNKNOWKN:
             break;
@@ -106,15 +122,22 @@ errflag_t value_from_byte_array(s_value* value, s_byte_array* barray){
     def_err_handler(!value, "value_from_byte_array value", ERR_NULL);
     def_err_handler(!barray, "value_from_byte_array barray", ERR_NULL);
     
-    memcpy(&value->as, barray->data, sizeof(value_as));
-    memcpy(&value->value_size, barray->data + sizeof(value_as), sizeof(uint32_t));
+    byte_t* cur = barray->data;
+    memcpy(&value->as, cur, sizeof(value_as));
+    cur+=sizeof(value_as);
+
+    memcpy(&value->ts, cur, sizeof(timestamp_t));
+    cur+=sizeof(timestamp_t);
+
+    memcpy(&value->value_size, cur, sizeof(uint32_t));
+    cur+=sizeof(uint32_t);
 
     switch (value->as) {
         case STR:
-            value->val.str = strndup((char*)barray->data + sizeof(value_as) + sizeof(uint32_t), value->value_size);
+            value->val.str = strndup((char*)cur, value->value_size);
             break;
         case U64:
-            memcpy(&value->val.u64, barray->data + sizeof(value_as) + sizeof(uint32_t), value->value_size);
+            memcpy(&value->val.u64, cur, value->value_size);
             break;
         case UNKNOWKN:
             break;

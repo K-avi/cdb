@@ -21,6 +21,9 @@ typedef struct s_map_bucket{
 
     struct s_map_bucket *next;
 }s_mapbucket; 
+//this is silly bc I use linear probing
+//I have no need to store the key in the bucket; I should 
+//only store a copy of the key in the head smh 
 
 
 typedef struct s_bucketthead{
