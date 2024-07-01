@@ -28,6 +28,8 @@ int main(void){
         pthread_join(threads[i], NULL);
     }
 
+    
+
 
 
     return 0;
