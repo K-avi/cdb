@@ -4,6 +4,7 @@
 #include "common.h"
 #include "err_handler.h"
 #include "key.h"
+#include "timestamp.h"
 #include "value.h"
 
 #include <bits/pthreadtypes.h>
@@ -13,7 +14,7 @@
 
 typedef struct s_map_bucket{
 
-    s_key *key; 
+    timestamp_t ts;
     s_value *value;
 
     pthread_mutex_t lock; //friendship ended w atomic
@@ -27,6 +28,7 @@ typedef struct s_map_bucket{
 
 
 typedef struct s_bucketthead{
+    s_key *key; 
     s_mapbucket *head; 
     pthread_mutex_t lock;
     uint8_t flags; //0x1 -> empty ; 0x2 -> tombstone 
