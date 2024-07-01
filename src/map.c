@@ -51,6 +51,7 @@ static void free_bucket(s_mapbucket *bucket){
     if(!bucket) return ; 
     
     value_free(bucket->value);
+    bucket->ts = 0;
 
     free(bucket->value);
     pthread_mutex_destroy(&(bucket->lock));
@@ -97,6 +98,10 @@ errflag_t map_insert(s_map *map, s_key *key, s_value *value){
             head->flags &= ~EMPTY_FLAG;
             head->flags &= ~TOMB_FLAG;
 
+            head->key = malloc(sizeof(s_key));
+            failure = key_duplicate(key,head->key);
+            def_err_handler(failure , "map_insert key_duplicate", failure);
+
             failure = bucket_insert(head, key, value);
             error_handler(failure, "map_insert bucket_insert", failure, pthread_mutex_unlock(&(head->lock)););
             pthread_mutex_unlock(&(head->lock));
@@ -125,8 +130,12 @@ errflag_t map_insert(s_map *map, s_key *key, s_value *value){
             head->flags &= ~EMPTY_FLAG;
             head->flags &= ~TOMB_FLAG;
 
+            head->key = malloc(sizeof(s_key));
+            failure = key_duplicate(key,head->key);
+            def_err_handler(failure , "map_insert key_duplicate", failure);
+
             failure = bucket_insert(head, key, value);
-            error_handler(failure, "map_insert bucket_insert", failure,pthread_mutex_unlock(&(head->lock)););
+            error_handler(failure, "map_insert bucket_insert", failure, pthread_mutex_unlock(&(head->lock)););
             pthread_mutex_unlock(&(head->lock));
             return ERR_OK;
         }
@@ -247,6 +256,7 @@ errflag_t map_remove(s_map *map, s_key *key){
                     prev = bucket;
                     bucket = bucket->next;
                 }
+       
             }
         }
         pthread_mutex_unlock(&(head->lock));
@@ -287,6 +297,11 @@ errflag_t map_delete_key(s_map *map, s_key *key){
                 }
                 head->flags |= TOMB_FLAG;
                 head->head = NULL;
+
+                key_free(head->key);
+                free(head->key); 
+                head->key = NULL; 
+
                 pthread_mutex_unlock(&(head->lock));
                 return ERR_OK;
             }       
@@ -319,8 +334,11 @@ errflag_t map_free(s_map *map){
                     free_bucket(bucket);
                     bucket = next;              
                 }
+                key_free(map->bucket_heads[i].key);
+                free(map->bucket_heads[i].key);
             }
             pthread_mutex_destroy(&(map->bucket_heads[i].lock));
+            
         }
     }
     free(map->bucket_heads);
