@@ -1,3 +1,6 @@
+# PROJECT PAUSED WHILE I'M CODING THE CUSTOM ALLOCATOR FOR IT :OOOO
+
+
 # Composition DataBase (CDB)
 
 - is a side project I'm doing during my summer internship at LIP6/Inria. 

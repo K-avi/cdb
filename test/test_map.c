@@ -120,25 +120,6 @@ int main(void){
     key_init("test", 1, &key);
 
     pthread_t threads[16];
-    /*
-    for(uint32_t i = 0 ; i < 16 ; i++){     
-        pthread_create(&threads[i], NULL, test_map_insert, &mapgen);
-        //test_map_insert(&mapgen);
-    }
-    for(uint32_t i = 0 ; i < 16 ; i++) pthread_join(threads[i], NULL);
-    
-    map_print(&map);
-
-    for(uint32_t i = 0 ; i < 16 ; i++){
-       pthread_create(&threads[i], NULL, test_map_lookup, &mapgen);
-    }
-    for(uint32_t i = 0 ; i < 16 ; i++) pthread_join(threads[i], NULL);
-    
-
-    for(uint32_t i = 0 ; i < 16 ; i++){
-        pthread_create(&threads[i], NULL, test_map_delete, &mapgen);
-    }
-    for(uint32_t i = 0 ; i < 16 ; i++) pthread_join(threads[i], NULL);*/
 
     for(uint32_t i = 0 ; i < 16 ; i++){
         pthread_create(&threads[i], NULL, multi_test, &mapgen);
