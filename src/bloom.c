@@ -47,7 +47,7 @@ errflag_t bloom_init(uint32_t bloom_size, uint32_t estimate_elements,s_bloom_fil
     filter->bloom_size = bloom_size;
 
     return ERR_OK;
-}//not done 
+}//not tested; might be wrong; bloom filter allocation
 
 //from : https://github.com/barrust/bloom/blob/master/src/bloom.c
 static uint64_t __fnv_1a(const char *key, int seed) {
@@ -59,7 +59,7 @@ static uint64_t __fnv_1a(const char *key, int seed) {
             h = h * 1099511628211ULL; // FNV_PRIME 64 bit
     }
     return h;
-}
+}//bloom filter placeholder hash function
 
 static uint64_t* __default_hash(uint32_t num_hashes, const char *str) {
     uint64_t *results = (uint64_t*)calloc(num_hashes, sizeof(uint64_t));
@@ -68,7 +68,7 @@ static uint64_t* __default_hash(uint32_t num_hashes, const char *str) {
         results[i] = __fnv_1a(str, i);
     }
     return results;
-}
+}//bloom filter placeholder hash function (used in insertion)
 
 
 

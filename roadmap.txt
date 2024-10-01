@@ -32,8 +32,9 @@ Implementation :
 
 Optimisations : 
 
-     - mempool/arena/allocator (necessary if I want ANY performance / scalability )
-        - I really need a custom allocator ffs 
+    - Actually I will not do that one 
+        - mempool/arena/allocator (necessary if I want ANY performance / scalability )
+            - I really need a custom allocator ffs 
      - better bucket implementations for the map (linked lists are bad )
      - better locking policy in the map 
 

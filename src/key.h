@@ -4,6 +4,7 @@
 #include "common.h"
 #include "err_handler.h"
 #include "timestamp.h"
+#include <stdint.h>
 #include <sys/types.h>
 
 
@@ -73,12 +74,16 @@ errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array);
 
 @brief: converts the key into a byte array
 */
-errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array);
+
+errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array, uint32_t offset);
 /*
 @param: key -> non null ; memleak on already initialized struct; the key that will receive the data from the byte array
 @param: byte_array -> non null ; initialized; the byte array that contains the data to convert to a key
+@param: offset -> the offset in the byte array where the key data starts
 
-@brief: converts the byte array into a key
+@brief: converts the byte array into a key; assumes that the byte_array->data field contains 
+the key entry, the offset is the start of the key entry in the byte array->data field
+
 */
 
 #ifdef debug 

@@ -75,26 +75,29 @@ errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array){
     def_err_handler(!byte_array, "key_to_byte_array byte_array", ERR_NULL);
     
     
-    uint32_t size =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t);
-    def_err_handler(size > byte_array->max, "key_to_byte_array size", ERR_VALS);
+    uint32_t size =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) ;
+    def_err_handler(size + byte_array->cur > byte_array->max, "key_to_byte_array size", ERR_VALS);
 
-    byte_array->cur = size ;
+    memcpy(byte_array->data + byte_array->cur, &key->key_size, sizeof(uint32_t));
+    memcpy(byte_array->data + byte_array->cur + sizeof(uint32_t), &key->ts, sizeof(timestamp_t));
 
-    memcpy(byte_array->data, &key->key_size, sizeof(uint32_t));
-    memcpy(byte_array->data + sizeof(uint32_t), &key->ts, sizeof(timestamp_t));
-
-    memcpy(byte_array->data + sizeof(uint32_t) + sizeof(timestamp_t), key->key, key->key_size);
+    memcpy(byte_array->data + byte_array->cur + sizeof(uint32_t) + sizeof(timestamp_t), key->key, key->key_size);
     
+    byte_array->cur += size;
+
     return ERR_OK;
 }// tested; seems ok
+/*
+WRONG WHAT IF THE BYTE ARRAY IS NOT EMPTY YOU DIMWIT 
+*/
 
-errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array){
+errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array, uint32_t offset){
     def_err_handler(!key, "key_from_byte_array key", ERR_NULL);
     def_err_handler(!byte_array, "key_from_byte_array byte_array", ERR_NULL);
     
-    key->key_size = *(uint32_t*)byte_array->data;
-    key->ts = *(timestamp_t*)(byte_array->data + sizeof(uint32_t));
-    key->key = strndup((char*)byte_array->data + sizeof(uint32_t) + sizeof(timestamp_t), key->key_size);
+    key->key_size = *(uint32_t*)(byte_array->data + offset);
+    key->ts = *(timestamp_t*)(byte_array->data + offset + sizeof(uint32_t));
+    key->key = strndup((char*)((byte_array->data+offset) + sizeof(uint32_t) + sizeof(timestamp_t)), key->key_size);
     
     return ERR_OK;
 }//tested; seems ok

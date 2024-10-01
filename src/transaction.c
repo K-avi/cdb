@@ -1,6 +1,10 @@
 #include "transaction.h"
+#include "common.h"
 #include "err_handler.h"
 #include "key.h"
+#include "value.h"
+#include <stdint.h>
+#include <string.h>
 
 /*********************************STATIC DYNAMIC ARRAY MANIPULATION*********************************/
 /***************************************************************************************************/
@@ -78,6 +82,8 @@ static void kvp_dynarr_free(s_kvp_dynarr *kvp_arr){
         kvp_arr->max_size = 0;
     }
 }
+/**************************************************************************************************** */
+/*****************************TXN_DYNARR STUFF******************************************************* */
 
 static errflag_t txn_dynarr_init(s_txn_dynarr *txn_arr, uint32_t size){
     def_err_handler(!txn_arr, "txn_dynarr_init txn_arr", ERR_NULL);
@@ -114,6 +120,21 @@ static errflag_t txn_dynarr_append(s_txn_dynarr *txn_arr, byte_t elem){
     txn_arr->cur_size++;
     return ERR_OK;
 }
+
+static errflag_t txn_dynarr_copy(s_txn_dynarr *txn_arr, byte_t* elements, uint32_t nb_bytes ){
+    def_err_handler(!txn_arr, "txn_dynarr_copy txn arr", ERR_NULL);
+    def_err_handler(!elements, "txn_dynarr_copy elements", ERR_NULL);
+
+    if(txn_arr->cur_size + nb_bytes > txn_arr->max_size){
+        errflag_t failure = txn_dynarr_realloc(txn_arr);
+        error_handler(failure, "txn_dynarr_copy txn_dynarr_realloc", failure, return failure;);
+    }
+
+    memcpy(txn_arr->txn_array + txn_arr->cur_size, elements, nb_bytes);
+    txn_arr->cur_size += nb_bytes;
+
+    return ERR_OK;
+}//not tested; copies nb_bytes from elements to txn_arr
 
 static void txn_dynarr_free(s_txn_dynarr *txn_arr){
     if(txn_arr){
@@ -228,6 +249,72 @@ errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
     //I will have to be careful. It shouldn't be hard (it's writing to a byte array after all) 
     //but if I get this wrong I will be in trouble
 
+    //create a byte array from the key and value and copy it to the txn array
+    //inneficient (uses the memory twice) but simple enough
+    s_byte_array barray = {0};
+    failure = key_to_byte_array(key, &barray);
+    def_err_handler(failure, "transaction_insert key_to_byte_array", failure);
+
+    failure = txn_dynarr_copy(&txn->txn_array, barray.data, barray.cur);
+    def_err_handler(failure, "transaction_insert txn_dynarr_copy", failure);
+
+    barray.cur = 0;
+
+    return ERR_OK;
+}//not done; not tested
+
+static const uint8_t* sub_mem (const void* big, const void* small, size_t blen, size_t slen){
+    /*
+    @param big : the big array that is searched for an occurence of small
+    @param small : the small array that is searched for in big
+    @param blen : the size of big in bytes
+    @param slen : the size of small in bytes
+
+    @return : a pointer to the first occurence of small in big or NULL if not found
+    */
+    //Could implement optimisations w word size but I won't
+    uint8_t* s = (uint8_t*)big;
+    uint8_t* find = (uint8_t*)small;
+
+	for(uint32_t i = 0; (i < blen) && ( (blen - i) > slen); i++){
+        if(s[i] == find[0]){  
+            if(memcmp(s+i, find, slen) == 0){
+                return s+i;
+            }
+        }
+    }
+    return NULL;
+}/*Think about it like strstr but for two void ptrs */
+
+errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
+    /*
+    I don't want to decode the whole journal array, something 
+    that CAN work would be to use strnstr 
+    */
+
+    s_byte_array key_barray = {0};
+    errflag_t failure = key_to_byte_array(key, &key_barray);
+    def_err_handler(failure, "transaction_lookup key_to_byte_array", failure);
+
+    const uint8_t* found = sub_mem(txn->txn_array.txn_array, 
+                                key_barray.data,
+                                txn->txn_array.cur_size,
+                                key_barray.cur);
+    if(found){
+        //decode the value and return it in value
+        
+        s_byte_array value_barray = {0};
+        value_barray.data = (uint8_t*)found + key_barray.cur;
+        //PROBLEM : I don't know the size of the value
+        //:pensive:
+        failure = value_from_byte_array(value, &key->ts,&value_barray);
+        def_err_handler(failure, "transaction_lookup value_from_byte_array", failure);
+    }else{
+        value->value_size = 0;
+        value->as = UNKNOWKN;
+        value->val.u64 = 0;
+    }
+
     return ERR_OK;
 }//not done
 
@@ -236,10 +323,6 @@ errflag_t transaction_remove(s_transaction* txn, s_key* key){
 }//not done
 
 errflag_t transaction_update(s_transaction* txn, s_key* key, s_value* value){
-    return ERR_OK;
-}//not done
-
-errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
     return ERR_OK;
 }//not done
 

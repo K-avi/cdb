@@ -47,19 +47,24 @@ the size of the key/value_data can be whatever
 typedef struct s_key_value_pair{
     s_key key;
     s_value value;
-}s_kvp;
+}s_kvp; //a key value pair is simply a key and a value
 
 typedef struct s_kvp_dynarr{
     uint32_t cur_size;
     uint32_t max_size;
     s_kvp* kvp_array;
-}s_kvp_dynarr;
+}s_kvp_dynarr; 
+//the kvp dynnamic array is a simple array of kvp 
+//I'm not sure why it exists (I can't remember) but it's here
+//I guess it can be used to look up a key ? 
 
 typedef struct s_txn_dynarr{
     uint32_t cur_size;
     uint32_t max_size;
     byte_t* txn_array;
-}s_txn_dynarr;
+}s_txn_dynarr; 
+//the txn dynamic array is a simple array of bytes, this array 
+//will be the one that is passed to the journal and written to disk 
 
 typedef struct s_transaction{
     s_txn_dynarr txn_array;
@@ -90,14 +95,47 @@ errflag_t transaction_begin(s_transaction* txn, uint32_t txn_id);
 @brief: appends a begin operation to the transaction buffer
 */
 errflag_t transaction_commit(s_transaction* txn);
-
+/*
+@param: txn ; non null ; initialized transaction pointer
+@brief: appends a commit operation to the transaction buffer, 
+raises an error if the transaction is not in a valid state i.e 
+no begin or already committed/aborted
+*/
 errflag_t transaction_abort(s_transaction* txn);
+/*
+@param: txn ; non null ; initialized transaction pointer
+@brief: appends an abort operation to the transaction buffer, 
+raises an error if the transaction is not in a valid state i.e 
+no begin or already committed/aborted
+*/
 
 errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value);
+/*
+@param: txn ; non null ; initialized transaction pointer
+@param: key ; non null ; initialized key to insert
+@param: value ; non null ; initialized value to insert
+
+
+*/
+
+errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value);
+/*
+@param: txn; non null; initialized transaction pointer
+@param: key; non null; initialized key to look up
+@param: value; non null; uninitialized value to store the result of the lookup
+
+@brief: looks up the key in the transaction buffer and returns the value in value 
+if the key is not found, value->as is set to UNKNOWN and value.val.u64 is set to 0
+*/
 errflag_t transaction_remove(s_transaction* txn, s_key* key);
+/*
+will probably be implemented by updating a flag or something 
+because I won't move memory around in the journal array
+*/
 
 errflag_t transaction_update(s_transaction* txn, s_key* key, s_value* value);
-errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value);
+/*
+*/
 
 errflag_t transaction_delete(s_transaction* txn, s_key* key);
 

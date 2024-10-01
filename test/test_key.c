@@ -41,7 +41,7 @@ int main(void){
     key_to_byte_array(&dummy_key, &byte_array);
 
     s_key new_key;
-    key_from_byte_array(&new_key, &byte_array);
+    key_from_byte_array(&new_key, &byte_array,0);
 
     key_print(&new_key);
 

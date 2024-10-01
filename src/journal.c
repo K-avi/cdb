@@ -53,7 +53,6 @@ errflag_t journal_init (uint32_t page_size, s_journal *journal){
     return ERR_OK;
 }//tested; ok
 
-
 static errflag_t journal_full_pages_append(s_journal *journal, s_journal_page *filled_page){
     def_err_handler(!journal, "journal_full_pages_append journal", ERR_NULL);
     def_err_handler(!filled_page, "journal_full_pages_append filled_page", ERR_NULL);
@@ -105,6 +104,7 @@ errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
     return ERR_OK;
 }//tested; seems ok ; more testing needed
 //doesnt support adding entries that are larger than the page size
+//adds an entry to the current page, if the entry is too large for the current page, it will create a new page and add the entry to that pageA
 
 
 static void journal_page_free(s_journal_page *page){
@@ -147,6 +147,13 @@ errflag_t journal_read(s_journal *journal, char *filename){
 
 #ifdef debug
 static void journal_page_print(s_journal_page *page){
+    if(page){
+        printf("size: %u\n", page->size);
+        printf("used: %u\n", page->used);
+        printf("next: %p\n", (void*)page->next);
+        printf("metadata: %p\n", (void*)page->metadata);
+        printf("entries: %p\n", (void*)page->entries);
+    }
     return;
 }//not done 
 
