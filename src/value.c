@@ -87,20 +87,20 @@ errflag_t value_to_byte_array(s_value* value, timestamp_t* ts, s_byte_array* bar
     def_err_handler(!value, "value_to_byte_array value", ERR_NULL);
     def_err_handler(!barray, "value_to_byte_array barray", ERR_NULL);
     
-    uint32_t size = value->value_size + sizeof(value_as) + sizeof(uint32_t)+sizeof(timestamp_t);
-    def_err_handler(size > barray->max, "value_to_byte_array size", ERR_VALS);
+    uint32_t size = value->value_size + sizeof(value_as) + sizeof(uint32_t) + sizeof(timestamp_t);
+    def_err_handler(size + barray->cur > barray->max, "value_to_byte_array size", ERR_VALS);
 
-    barray->cur = size;
-
-    uint8_t *cur = barray->data;
+    byte_t *cur = barray->data + barray->cur;
 
     memcpy(cur, &value->as, sizeof(value_as));
     cur+=sizeof(value_as);
+   
     memcpy(cur, ts, sizeof(timestamp_t));
-
     cur+=sizeof(timestamp_t);
+
     memcpy(cur, &value->value_size, sizeof(uint32_t));
     cur+=sizeof(uint32_t);
+
 
     switch (value->as) {
         case STR:
@@ -114,8 +114,9 @@ errflag_t value_to_byte_array(s_value* value, timestamp_t* ts, s_byte_array* bar
         default:
             def_err_handler(ERR_VALS, "value_to_byte_array", ERR_VALS);
     }
+    barray->cur += size;
     return ERR_OK;
-}//not tested; might be wrong
+}//tested; works
 
 errflag_t value_from_byte_array(s_value* value, timestamp_t* ts, s_byte_array* barray){
     def_err_handler(!value, "value_from_byte_array value", ERR_NULL);

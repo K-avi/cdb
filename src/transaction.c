@@ -251,17 +251,24 @@ errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
 
     //create a byte array from the key and value and copy it to the txn array
     //inneficient (uses the memory twice) but simple enough
-    s_byte_array barray = {0};
+    s_byte_array barray ; 
+    barray.cur = 0 ; 
+    barray.max =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) + //key size
+                  value->value_size + sizeof(value_as) + sizeof(uint32_t) + sizeof(timestamp_t) ; //value size
+    barray.data = calloc(barray.max , sizeof(uint8_t));
+
     failure = key_to_byte_array(key, &barray);
     def_err_handler(failure, "transaction_insert key_to_byte_array", failure);
+
+    failure = value_to_byte_array(value, &key->ts, &barray);
+    def_err_handler(failure, "transaction_insert value_to_byte_array", failure);
 
     failure = txn_dynarr_copy(&txn->txn_array, barray.data, barray.cur);
     def_err_handler(failure, "transaction_insert txn_dynarr_copy", failure);
 
-    barray.cur = 0;
-
+    free(barray.data);
     return ERR_OK;
-}//not done; not tested
+}//done; testing 
 
 static const uint8_t* sub_mem (const void* big, const void* small, size_t blen, size_t slen){
     /*
@@ -305,8 +312,7 @@ errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
         
         s_byte_array value_barray = {0};
         value_barray.data = (uint8_t*)found + key_barray.cur;
-        //PROBLEM : I don't know the size of the value
-        //:pensive:
+        //this could be wrong tbh
         failure = value_from_byte_array(value, &key->ts,&value_barray);
         def_err_handler(failure, "transaction_lookup value_from_byte_array", failure);
     }else{
@@ -316,7 +322,7 @@ errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
     }
 
     return ERR_OK;
-}//not done
+}//not tested
 
 errflag_t transaction_remove(s_transaction* txn, s_key* key){
     return ERR_OK;
