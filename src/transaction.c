@@ -4,6 +4,7 @@
 #include "key.h"
 #include "value.h"
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 /*********************************STATIC DYNAMIC ARRAY MANIPULATION*********************************/
@@ -228,6 +229,19 @@ errflag_t transaction_abort(s_transaction* txn){
     return ERR_OK;
 }//not tested
 
+
+static errflag_t init_barray(s_byte_array* barray, size_t max){
+    def_err_handler(!barray, "init_barray barray", ERR_NULL);
+
+    barray->data = calloc(max, sizeof(byte_t));
+    def_err_handler(!barray->data, "init_barray barray->data", ERR_ALLOC);
+
+    barray->cur = 0; 
+    barray->max = max; 
+
+    return ERR_OK;
+}
+
 /******these are gonna be a pain*/
 errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
     def_err_handler(!txn, "transaction_insert txn", ERR_NULL);
@@ -252,10 +266,9 @@ errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
     //create a byte array from the key and value and copy it to the txn array
     //inneficient (uses the memory twice) but simple enough
     s_byte_array barray ; 
-    barray.cur = 0 ; 
-    barray.max =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) + //key size
-                  value->value_size + sizeof(value_as) + sizeof(uint32_t) + sizeof(timestamp_t) ; //value size
-    barray.data = calloc(barray.max , sizeof(uint8_t));
+    init_barray(&barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) + //key size
+                  value->value_size + sizeof(value_as) + sizeof(uint32_t) + sizeof(timestamp_t) );
+   
 
     failure = key_to_byte_array(key, &barray);
     def_err_handler(failure, "transaction_insert key_to_byte_array", failure);
@@ -299,7 +312,9 @@ errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
     that CAN work would be to use strnstr 
     */
 
-    s_byte_array key_barray = {0};
+    s_byte_array key_barray ;
+    init_barray(&key_barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) );
+
     errflag_t failure = key_to_byte_array(key, &key_barray);
     def_err_handler(failure, "transaction_lookup key_to_byte_array", failure);
 
@@ -307,9 +322,10 @@ errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
                                 key_barray.data,
                                 txn->txn_array.cur_size,
                                 key_barray.cur);
+    
+    
     if(found){
         //decode the value and return it in value
-        
         s_byte_array value_barray = {0};
         value_barray.data = (uint8_t*)found + key_barray.cur;
         //this could be wrong tbh
@@ -320,9 +336,9 @@ errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
         value->as = UNKNOWKN;
         value->val.u64 = 0;
     }
-
+    free(key_barray.data);
     return ERR_OK;
-}//not tested
+}//does not work
 
 errflag_t transaction_remove(s_transaction* txn, s_key* key){
     return ERR_OK;

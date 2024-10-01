@@ -33,11 +33,17 @@ int main(void){
     val_str.value_size = strlen(val_str.val.str);
 
     transaction_insert(&txn, &key_str, &val_str);
-    
 
+
+    s_value val_lookup1;
+    transaction_lookup(&txn, &key_u64, &val_lookup1);
     transaction_commit(&txn);
     
     transaction_print(&txn);
+
+    value_print(&val_lookup1);
+    printf("========\n");
+    value_print(&val_u64);
 
     transaction_free(&txn);
     return 0 ; 
