@@ -35,16 +35,31 @@ int main(void){
     transaction_insert(&txn, &key_str, &val_str);
 
 
-    s_value val_lookup1;
-    transaction_lookup(&txn, &key_u64, &val_lookup1);
+    s_value val_lookupu64;
+    transaction_lookup(&txn, &key_u64, &val_lookupu64);
+
+    s_value val_lookupstr;
+    transaction_lookup(&txn, &key_str, &val_lookupstr);
+
+    transaction_commit(&txn);
+
+    transaction_print(&txn);
+
+    value_print(&val_lookupu64);
+    printf("========\n");
+    value_print(&val_u64);
+
+    
     transaction_commit(&txn);
     
     transaction_print(&txn);
 
-    value_print(&val_lookup1);
+    value_print(&val_lookupstr);
     printf("========\n");
-    value_print(&val_u64);
+    value_print(&val_str);
 
+    value_free(&val_lookupu64);
+    value_free(&val_lookupstr);
     transaction_free(&txn);
     return 0 ; 
 }
