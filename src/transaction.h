@@ -115,7 +115,8 @@ errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value);
 @param: key ; non null ; initialized key to insert
 @param: value ; non null ; initialized value to insert
 
-
+@brief: inserts key and value as byte array in the transaction buffer, doesn't check for 
+existence before inserting. 
 */
 
 errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value);

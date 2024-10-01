@@ -75,8 +75,6 @@ errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array){
     def_err_handler(!byte_array, "key_to_byte_array byte_array", ERR_NULL);
     
     uint32_t size =  key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) ;
-
-    printf("tot siz : %u bmax:  %u\n", size + byte_array->cur , byte_array->max);
     def_err_handler(size + byte_array->cur > byte_array->max, "key_to_byte_array size", ERR_VALS);
 
     memcpy(byte_array->data + byte_array->cur, &key->key_size, sizeof(uint32_t));

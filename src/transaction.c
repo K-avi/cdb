@@ -125,7 +125,7 @@ static errflag_t txn_dynarr_copy(s_txn_dynarr *txn_arr, byte_t* elements, uint32
     def_err_handler(!txn_arr, "txn_dynarr_copy txn arr", ERR_NULL);
     def_err_handler(!elements, "txn_dynarr_copy elements", ERR_NULL);
 
-    if(txn_arr->cur_size + nb_bytes > txn_arr->max_size){
+    while(txn_arr->cur_size + nb_bytes > txn_arr->max_size){
         errflag_t failure = txn_dynarr_realloc(txn_arr);
         error_handler(failure, "txn_dynarr_copy txn_dynarr_realloc", failure, return failure;);
     }
@@ -268,7 +268,7 @@ errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
 
     free(barray.data);
     return ERR_OK;
-}//done; testing 
+}//done; seems to work 
 
 static const uint8_t* sub_mem (const void* big, const void* small, size_t blen, size_t slen){
     /*

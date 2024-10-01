@@ -21,7 +21,7 @@ int main(void){
 
     transaction_insert(&txn, &key_u64, &val_u64);
 
-    /*
+    
     s_key key_str; 
     key_str.key = "key_test2" ;
     key_str.key_size = strlen(key_u64.key);
@@ -33,7 +33,7 @@ int main(void){
     val_str.value_size = strlen(val_str.val.str);
 
     transaction_insert(&txn, &key_str, &val_str);
-    */
+    
 
     transaction_commit(&txn);
     
