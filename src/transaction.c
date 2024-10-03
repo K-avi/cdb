@@ -242,6 +242,49 @@ static errflag_t init_barray(s_byte_array* barray, size_t max){
     return ERR_OK;
 }
 
+static inline errflag_t txn_dynarr_append_kvp(s_txn_dynarr* txn_dynarr, s_key* key, s_value* value){
+
+    //I should support a way to write the key and value to the transaction array as well
+    //I will have to be careful. It shouldn't be hard (it's writing to a byte array after all) 
+    //but if I get this wrong I will be in trouble
+
+    //create a byte array from the key and value and copy it to the txn array
+    //inneficient (uses the memory twice) but simple enough
+    s_byte_array barray ; 
+    init_barray(&barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) + //key size
+                  value->value_size + sizeof(value_as) + sizeof(uint32_t) + sizeof(timestamp_t) );
+   
+
+    errflag_t failure = key_to_byte_array(key, &barray);
+    def_err_handler(failure, "txn_dynarr_append_kvp key_to_byte_array", failure);
+
+    failure = value_to_byte_array(value, &key->ts, &barray);
+    def_err_handler(failure, "txn_dynarr_append_kvp value_to_byte_array", failure);
+
+    failure = txn_dynarr_copy(txn_dynarr, barray.data, barray.cur);
+    def_err_handler(failure, "txn_dynarr_append_kvp txn_dynarr_copy", failure);
+
+    free(barray.data);
+
+    return ERR_OK;
+}
+
+static inline errflag_t txn_dynnar_append_key(s_txn_dynarr* txn_dynarr, s_key* key){
+    
+    s_byte_array barray ; 
+    init_barray(&barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) ); //key size   
+
+    errflag_t failure = key_to_byte_array(key, &barray);
+    def_err_handler(failure, "txn_dynarr_append_key key_to_byte_array", failure);
+    
+    failure = txn_dynarr_copy(txn_dynarr, barray.data, barray.cur);
+    def_err_handler(failure, "txn_dynarr_append_key txn_dynarr_copy", failure);
+
+    free(barray.data);
+
+    return ERR_OK;
+}
+
 /******these are gonna be a pain*/
 errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
     def_err_handler(!txn, "transaction_insert txn", ERR_NULL);
@@ -259,98 +302,114 @@ errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
     failure = txn_dynarr_append(&txn->txn_array, txn->txn_id);
     def_err_handler(failure, "transaction_insert txn_dynarr_append", failure);
 
-    //I should support a way to write the key and value to the transaction array as well
-    //I will have to be careful. It shouldn't be hard (it's writing to a byte array after all) 
-    //but if I get this wrong I will be in trouble
+    failure = txn_dynarr_append_kvp(&txn->txn_array, key, value);
+    def_err_handler(failure, "append_kvp_txndynarr", failure);
 
-    //create a byte array from the key and value and copy it to the txn array
-    //inneficient (uses the memory twice) but simple enough
-    s_byte_array barray ; 
-    init_barray(&barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) + //key size
-                  value->value_size + sizeof(value_as) + sizeof(uint32_t) + sizeof(timestamp_t) );
-   
-
-    failure = key_to_byte_array(key, &barray);
-    def_err_handler(failure, "transaction_insert key_to_byte_array", failure);
-
-    failure = value_to_byte_array(value, &key->ts, &barray);
-    def_err_handler(failure, "transaction_insert value_to_byte_array", failure);
-
-    failure = txn_dynarr_copy(&txn->txn_array, barray.data, barray.cur);
-    def_err_handler(failure, "transaction_insert txn_dynarr_copy", failure);
-
-    free(barray.data);
     return ERR_OK;
 }//done; seems to work 
 
-static const uint8_t* sub_mem (const void* big, const void* small, size_t blen, size_t slen){
-    /*
-    @param big : the big array that is searched for an occurence of small
-    @param small : the small array that is searched for in big
-    @param blen : the size of big in bytes
-    @param slen : the size of small in bytes
 
-    @return : a pointer to the first occurence of small in big or NULL if not found
-    */
-    //Could implement optimisations w word size but I won't
-    uint8_t* s = (uint8_t*)big;
-    uint8_t* find = (uint8_t*)small;
 
-	for(uint32_t i = 0; (i < blen) && ( (blen - i) > slen); i++){
-        if(s[i] == find[0]){  
-            if(memcmp(s+i, find, slen) == 0){
-                return s+i;
+errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
+    def_err_handler(!txn, "transaction_lookup txn", ERR_NULL);
+    def_err_handler(!key, "transaction_lookup key", ERR_NULL);
+    def_err_handler(!value, "transaction_lookup value", ERR_NULL);
+    def_err_handler(!(txn->flags & TXN_BEGIN), "transaction_lookup illegal op no begin", ERR_VALS);
+    def_err_handler( (txn->flags & (TXN_COMMIT | TXN_ABORT)), "transaction_commit illegal op already ended", ERR_VALS);
+
+    errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_LOOKUP); 
+    def_err_handler(failure, "transaction_lookup txn_dynarr_append OP_LOOKUP", failure);
+
+    failure = txn_dynarr_append(&txn->txn_array, txn->txn_id);
+    def_err_handler(failure, "transaction_lookup txn_dynarr_append", failure);
+
+    s_kvp* key_val_arr = txn->kvp_array.kvp_array;
+    for(uint32_t i = 0; i < txn->kvp_array.cur_size ; i++){
+        if( key->key_size == key_val_arr[i].key.key_size){
+            if(!strncmp(key_val_arr[i].key.key, key->key, key->key_size)) {
+                failure = value_dup(&(key_val_arr[i].value), value);
+                def_err_handler(failure, "transaction_lookup value_dup", failure);
+                return  ERR_OK;
             }
         }
     }
-    return NULL;
-}/*Think about it like strstr but for two void ptrs */
 
-errflag_t transaction_lookup(s_transaction* txn, s_key* key, s_value* value){
-    /*
-    I don't want to decode the whole journal array, something 
-    that CAN work would be to use strnstr 
-    */
+    value->value_size = 0 ; 
+    value->as = UNKNOWKN ;
+    value->val.u64 = 0 ;
 
-    s_byte_array key_barray ;
-    init_barray(&key_barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) );
-
-    errflag_t failure = key_to_byte_array(key, &key_barray);
-    def_err_handler(failure, "transaction_lookup key_to_byte_array", failure);
-
-    const uint8_t* found = sub_mem(txn->txn_array.txn_array, 
-                                key_barray.data,
-                                txn->txn_array.cur_size,
-                                key_barray.cur);
-    
-    
-    if(found){
-        //decode the value and return it in value
-        s_byte_array value_barray = {0};
-        value_barray.data = (uint8_t*)found + key_barray.cur;
-        //this could be wrong tbh
-        failure = value_from_byte_array(value, &key->ts,&value_barray);
-        def_err_handler(failure, "transaction_lookup value_from_byte_array", failure);
-    }else{
-        value->value_size = 0;
-        value->as = UNKNOWKN;
-        value->val.u64 = 0;
-    }
-    free(key_barray.data);
     return ERR_OK;
-}//does not work
+}//seems to work
 
 errflag_t transaction_remove(s_transaction* txn, s_key* key){
+    
+    errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_REMOVE); 
+    def_err_handler(failure, "transaction_remove txn_dynarr_append OP_REMOVE", failure);
+
+    failure = txn_dynarr_append(&txn->txn_array, txn->txn_id); 
+    def_err_handler(failure, "transaction_remove txn_dynarr_append txn_id", failure);
+
+    failure = txn_dynnar_append_key(&txn->txn_array, key);
+    def_err_handler(failure, "transaction_remove txn_dynarr_append_key", failure);
+
+    s_kvp* kvp_arr = txn->kvp_array.kvp_array ;
+    for(uint32_t i = 0 ; i < txn->kvp_array.cur_size; i++){
+        if( key->key_size == kvp_arr[i].key.key_size){
+            if((!strncmp(kvp_arr[i].key.key, key->key, key->key_size)) ){
+                kvp_arr[i].key.key_size = 0 ; //A key with a length of zero will 
+                //never work bc an 0 sized string doesn't really make sense tbh 
+                //if this doesn't work; I guess I'll do some memmove thing idk
+                return ERR_OK;
+            }
+        }
+    }
     return ERR_OK;
-}//not done
+}//not tested
 
 errflag_t transaction_update(s_transaction* txn, s_key* key, s_value* value){
-    return ERR_OK;
-}//not done
+    def_err_handler(!txn, "transaction_update txn", ERR_NULL);
+    def_err_handler(!key, "transaction_update key", ERR_NULL);
+    def_err_handler(!value, "transaction_update value", ERR_NULL);
+    def_err_handler(!(txn->flags & TXN_BEGIN), "transaction_update illegal op no begin", ERR_VALS);
+    def_err_handler( (txn->flags & (TXN_COMMIT | TXN_ABORT)), "transaction_commit illegal op already ended", ERR_VALS);
 
-errflag_t transaction_delete(s_transaction* txn, s_key* key){
+    errflag_t failure = txn_dynarr_append(&txn->txn_array, OP_UPDATE); 
+    def_err_handler(failure, "transaction_update txn_dynarr_append OP_LOOKUP", failure);
+
+    failure = txn_dynarr_append(&txn->txn_array, txn->txn_id);
+    def_err_handler(failure, "transaction_update txn_dynarr_append", failure);   
+
+    s_kvp* kvp_arr = txn->kvp_array.kvp_array ;
+    for(uint32_t i = 0 ; i < txn->kvp_array.cur_size; i++){
+        if( key->key_size == kvp_arr[i].key.key_size){
+            if((!strncmp(kvp_arr[i].key.key, key->key, key->key_size)) ){
+               
+                failure = txn_dynarr_append_kvp(&txn->txn_array, key, value);
+                def_err_handler(failure, "transaction_update txn_dynarr_append_kvp", failure);   
+
+                kvp_arr[i].key.ts = key->ts ;
+                
+                failure = value_free(&kvp_arr[i].value);
+                def_err_handler(failure, "transaction_update value_free", failure);   
+
+                failure = value_dup(value, &kvp_arr[i].value);//unsure abt that
+                def_err_handler(failure, "transaction_update value_dup", failure);
+
+                return ERR_OK;
+            }
+        }
+    }
+
+
+    //behaves like insert on non existing key ; unsure if this is good behavior
+    failure = txn_dynarr_append_kvp(&txn->txn_array, key, value);
+    def_err_handler(failure, "transaction_update txn_dynarr_append_kvp", failure); 
+
+    failure = kvp_dynarr_append(&txn->kvp_array, key, value);
+    def_err_handler(failure, "transaction_update kvp_dynarr_append", failure); 
+
     return ERR_OK;
-}//not done
+}//not tested
 
 /***************************************************************************************************/
 

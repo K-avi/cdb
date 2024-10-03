@@ -79,7 +79,6 @@ errflag_t value_dup(s_value *src, s_value *dst){
     dst->val = dup_tab[src->as](src->val);
     dst->value_size = src->value_size;
     
-
     return ERR_OK;
 }//tested; ok; just a simple copy of the struct 
 

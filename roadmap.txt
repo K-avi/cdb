@@ -1,4 +1,4 @@
-PROJECT PAUSED WHILE I'M CODING THE CUSTOM ALLOCATOR FOR IT :OOOO
+THE JOURNAL SHOULD BE READ FROM FINISH TO START U DUMB FUCK THIS IS NOT CORRECT FFS
 
 
 Tests : 
@@ -25,7 +25,6 @@ Implementation :
     Not done : 
         - journal
         - transaction 
-            -> I need to create the bytecode to write transactions to the journal. This is annoying
 
         - composition 
 

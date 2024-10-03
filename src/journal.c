@@ -1,4 +1,5 @@
 #include "journal.h"
+#include "err_handler.h"
 #include "transaction.h"
 
 #include <string.h>
@@ -132,7 +133,72 @@ void journal_free(s_journal *journal, uint8_t flags){
     }
 }//tested; ok
 
+static const uint8_t* sub_mem (const void* big, const void* small, size_t blen, size_t slen){
+    /*
+    @param big : the big array that is searched for an occurence of small
+    @param small : the small array that is searched for in big
+    @param blen : the size of big in bytes
+    @param slen : the size of small in bytes
+
+    @return : a pointer to the first occurence of small in big or NULL if not found
+    */
+    //Could implement optimisations w word size but I won't
+    uint8_t* s = (uint8_t*)big;
+    uint8_t* find = (uint8_t*)small;
+
+	for(uint32_t i = 0; (i < blen) && ( (blen - i) > slen); i++){
+        if(s[i] == find[0]){  
+            if(memcmp(s+i, find, slen) == 0){
+                return s+i;
+            }
+        }
+    }
+    return NULL;
+}/*Think about it like strstr but for two void ptrs */
+
+static errflag_t init_barray(s_byte_array* barray, size_t max){
+    def_err_handler(!barray, "init_barray barray", ERR_NULL);
+
+    barray->data = calloc(max, sizeof(byte_t));
+    def_err_handler(!barray->data, "init_barray barray->data", ERR_ALLOC);
+
+    barray->cur = 0; 
+    barray->max = max; 
+
+    return ERR_OK;
+}
+
 errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
+
+    s_byte_array key_barray ;
+    init_barray(&key_barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) );
+
+    errflag_t failure = key_to_byte_array(key, &key_barray);
+    def_err_handler(failure, "transaction_lookup key_to_byte_array", failure);
+    /* oopsi
+        THIS IS WRONG I SHOULD FIND THE ***LAST*** INSTANCE OF THE VALUE IN THE JOURNAL FFS 
+        THIS IS SIMPLE
+    const uint8_t* found = sub_mem(txn->txn_array.txn_array, 
+                                key_barray.data,
+                                txn->txn_array.cur_size,
+                                key_barray.cur);
+    
+    
+    if(found){
+        //decode the value and return it in value
+        s_byte_array value_barray = {0};
+        value_barray.data = (uint8_t*)found + key_barray.cur;
+        //this could be wrong tbh
+        failure = value_from_byte_array(value, &key->ts,&value_barray);
+        def_err_handler(failure, "transaction_lookup value_from_byte_array", failure);
+    }else{
+        value->value_size = 0;
+        value->as = UNKNOWKN;
+        value->val.u64 = 0;
+    }
+    */
+    free(key_barray.data);
+
     return ERR_OK;
 }//not done 
 

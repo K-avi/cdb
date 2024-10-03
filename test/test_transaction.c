@@ -49,7 +49,7 @@ int main(void){
     printf("========\n");
     value_print(&val_u64);
 
-    
+    printf("testing illegal commit : \n");
     transaction_commit(&txn);
     
     transaction_print(&txn);

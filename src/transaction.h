@@ -21,7 +21,6 @@ typedef enum txn_op{
     OP_REMOVE,
     OP_UPDATE,
     OP_LOOKUP,
-    OP_DELETE,
 }journal_op;
 /*these are basically "opcode" for the txn buffer / journal entries
 they will be used to determine what to do with the data ; you can see them as
@@ -130,15 +129,25 @@ if the key is not found, value->as is set to UNKNOWN and value.val.u64 is set to
 */
 errflag_t transaction_remove(s_transaction* txn, s_key* key);
 /*
+@param : txn; non null; initialized transaction pointer
+@param : key; non null; initialized key to remove from the txn buffer
+
+@brief: "deletes" a key from the transaction by setting it's associated mem to zero 
+
 will probably be implemented by updating a flag or something 
 because I won't move memory around in the journal array
 */
 
 errflag_t transaction_update(s_transaction* txn, s_key* key, s_value* value);
 /*
-*/
+@param : txn, non null, initialized transaction pointer 
+@param : key, non null, initialized key pointer; the key that will be updated (if it exists)
+@param : value, non null, initialized value pointer; the new value for key
 
-errflag_t transaction_delete(s_transaction* txn, s_key* key);
+@brief : updates the value of key in the kvp array if it exists in the transaction 
+and writes the new key value pair in the txn buffer ; if the key doesn't already exists; 
+inserts it to the kvp_array 
+*/
 
 void transaction_free(s_transaction* txn);
 
