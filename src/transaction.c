@@ -364,7 +364,7 @@ errflag_t transaction_remove(s_transaction* txn, s_key* key){
         }
     }
     return ERR_OK;
-}//not tested
+}//tested; might be wrong ; kinda odd
 
 errflag_t transaction_update(s_transaction* txn, s_key* key, s_value* value){
     def_err_handler(!txn, "transaction_update txn", ERR_NULL);
@@ -400,7 +400,6 @@ errflag_t transaction_update(s_transaction* txn, s_key* key, s_value* value){
         }
     }
 
-
     //behaves like insert on non existing key ; unsure if this is good behavior
     failure = txn_dynarr_append_kvp(&txn->txn_array, key, value);
     def_err_handler(failure, "transaction_update txn_dynarr_append_kvp", failure); 
@@ -409,7 +408,7 @@ errflag_t transaction_update(s_transaction* txn, s_key* key, s_value* value){
     def_err_handler(failure, "transaction_update kvp_dynarr_append", failure); 
 
     return ERR_OK;
-}//not tested
+}// seems to work
 
 /***************************************************************************************************/
 

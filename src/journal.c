@@ -1,11 +1,17 @@
 #include "journal.h"
+#include "common.h"
 #include "err_handler.h"
 #include "transaction.h"
 
+#include <pthread.h>
+#include <stdint.h>
+#include <stdio.h>
 #include <string.h>
 
 #define DEFAULT_PAGE_SIZE 4096
 uint32_t glob_page_size = DEFAULT_PAGE_SIZE;
+
+#define JOURNAL_FILE_SIGNATRUE 0x6976616e00 //it's me in hex :)
 
 static errflag_t journal_page_init(uint32_t page_size, s_journal_page *page){
     def_err_handler(!page, "journal_page_init page", ERR_NULL);
@@ -69,7 +75,8 @@ static errflag_t journal_full_pages_append(s_journal *journal, s_journal_page *f
     current->next = filled_page;
     return ERR_OK;
 }//tested; ok 
-
+//I want the oldest full page first bc they 
+//should be the ones written to disk first
 
 errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
     def_err_handler(!journal, "journal_add journal", ERR_NULL);
@@ -106,7 +113,10 @@ errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
 }//tested; seems ok ; more testing needed
 //doesnt support adding entries that are larger than the page size
 //adds an entry to the current page, if the entry is too large for the current page, it will create a new page and add the entry to that pageA
-
+//One way to handle huge entries would be to just allocate them a huge ass pagge 
+//the metadata is not updated in this function 
+//this is wrong.
+//It should take a transaction tbh
 
 static void journal_page_free(s_journal_page *page){
     if(page){
@@ -146,7 +156,7 @@ static const uint8_t* sub_mem (const void* big, const void* small, size_t blen, 
     uint8_t* s = (uint8_t*)big;
     uint8_t* find = (uint8_t*)small;
 
-	for(uint32_t i = 0; (i < blen) && ( (blen - i) > slen); i++){
+	for(int32_t i = blen - slen  ; i >= 0 ; --i){
         if(s[i] == find[0]){  
             if(memcmp(s+i, find, slen) == 0){
                 return s+i;
@@ -175,37 +185,93 @@ errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
 
     errflag_t failure = key_to_byte_array(key, &key_barray);
     def_err_handler(failure, "transaction_lookup key_to_byte_array", failure);
-    /* oopsi
-        THIS IS WRONG I SHOULD FIND THE ***LAST*** INSTANCE OF THE VALUE IN THE JOURNAL FFS 
-        THIS IS SIMPLE
-    const uint8_t* found = sub_mem(txn->txn_array.txn_array, 
-                                key_barray.data,
-                                txn->txn_array.cur_size,
-                                key_barray.cur);
-    
-    
+   
+    s_journal_page *current = journal->current_page;
+
+    //only need to lock the current page because the filled pages / next pages are read only
+    pthread_mutex_lock(&journal->lock_current_page);
+
+    if(current->metadata->end_time < key->ts){
+        //if the key is newer than the current page, it's not in the journal
+        pthread_mutex_unlock(&journal->lock_current_page);
+        value_ret = NULL;
+        return ERR_OK;
+    }
+    const uint8_t* found = sub_mem(current->entries, key_barray.data, current->used, key_barray.cur);
     if(found){
-        //decode the value and return it in value
-        s_byte_array value_barray = {0};
+        s_byte_array value_barray; 
         value_barray.data = (uint8_t*)found + key_barray.cur;
         //this could be wrong tbh
-        failure = value_from_byte_array(value, &key->ts,&value_barray);
-        def_err_handler(failure, "transaction_lookup value_from_byte_array", failure);
-    }else{
-        value->value_size = 0;
-        value->as = UNKNOWKN;
-        value->val.u64 = 0;
+        
+        failure = value_from_byte_array(value_ret, &key->ts,&value_barray);
+        free(key_barray.data);
+        pthread_mutex_unlock(&journal->lock_current_page);
+        def_err_handler(failure, "journal_lookup value_from_byte_array", failure);
+        
+        return ERR_OK;
     }
-    */
-    free(key_barray.data);
+    current = current->next;// do this before unlocking to avoid another thread overwritting next
+    pthread_mutex_unlock(&journal->lock_current_page);
 
+    //general case with a while loop; code is the same as above but without the lock; SHOULD work bc
+    //the list is head insert only and only the current page is written to
+    while (current) {
+        if(current->metadata->end_time < key->ts){
+        //if ts is higher than the end time of the page, the key is not in the journal
+            value_ret = NULL;
+            free(key_barray.data);
+            return ERR_OK;
+        }
+        found = sub_mem(current->entries, key_barray.data, current->used, key_barray.cur);
+        if(found){
+            s_byte_array value_barray; 
+            value_barray.data = (uint8_t*)found + key_barray.cur;
+            //this could be wrong tbh
+            
+            failure = value_from_byte_array(value_ret, &key->ts,&value_barray);
+            free(key_barray.data);
+            def_err_handler(failure, "journal_lookup value_from_byte_array", failure);
+            
+            return ERR_OK;
+        }
+        current = current->next;
+    }
+    
+    value_ret = NULL;
+    free(key_barray.data);
+    
     return ERR_OK;
-}//not done 
+}//not tested; very likely to be wrong ; doesn't support bloom filter yet
+//doesn't take journal files into account yet
 
 
 errflag_t journal_write(s_journal *journal, char *filename){
+    def_err_handler(!journal, "journal_write journal", ERR_NULL);
+    def_err_handler(!filename, "journal_write filename", ERR_NULL);
+
+
+    FILE * file = fopen(filename, "rb");
+    if(file){
+        uint64_t signature = 0;
+        fgets((char*)&signature, sizeof(uint64_t), file);
+        if(signature != JOURNAL_FILE_SIGNATRUE){
+            fclose(file);
+            def_err_handler(1, "journal_write signature", ERR_VALS);            
+        }
+    }
+    fclose(file);
+    
+    file = fopen(filename, "ab+");
+    def_err_handler(!file, "journal_write file", ERR_VALS);
+
+    s_journal_page *first_full = journal->filled_pages;
+
+    while(first_full){
+        fwrite(first_full->entries, first_full->used, 1, file);
+        first_full = first_full->next;
+    }
     return ERR_OK;
-}//not done
+}//not tested; flushed the filled pages to disk; doesnt write metadata ; kinda bad tbh
 
 errflag_t journal_read(s_journal *journal, char *filename){
     return ERR_OK;

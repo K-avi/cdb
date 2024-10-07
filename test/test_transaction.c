@@ -38,8 +38,30 @@ int main(void){
     s_value val_lookupu64;
     transaction_lookup(&txn, &key_u64, &val_lookupu64);
 
+    printf("val u64 before update\n");
+    value_print(&val_lookupu64);
+    printf("========\n");
+
     s_value val_lookupstr;
     transaction_lookup(&txn, &key_str, &val_lookupstr);
+
+
+    s_value new_val ; 
+    new_val.val.u64 = 10 ; 
+    new_val.as = U64;
+    new_val.value_size = sizeof(U64);
+
+    transaction_update(&txn, &key_str,&new_val);
+
+    value_free(&val_lookupu64);
+    transaction_lookup(&txn, &key_str, &val_lookupu64);
+
+    printf("val u64 after update\n");
+    value_print(&val_lookupu64);
+    printf("========\n");
+
+    transaction_remove(&txn, &key_u64);
+    transaction_lookup(&txn,  &key_u64, &val_lookupu64);
 
     transaction_commit(&txn);
 
