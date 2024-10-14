@@ -1,9 +1,11 @@
 #include "../src/journal.h"
 #include <pthread.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
-
+#include <string.h>
+#include <sys/types.h>
 
 struct journal_tgen{
     s_journal *journal;
@@ -15,39 +17,67 @@ void* test_journal_add(void*args){
     s_journal *journal = ((struct journal_tgen*)args)->journal;
     s_timegen *tsgen = ((struct journal_tgen*)args)->tsgen;
 
-    s_transaction txn;
-    transaction_init(&txn);
+    for(uint32_t i = 0 ; i < 16; i++){
+        s_transaction txn;
+        transaction_init(&txn);
 
-    timestamp_t ts;
-    get_timestamp(tsgen, &ts);
+        timestamp_t ts;
+        get_timestamp(tsgen, &ts);
 
-    transaction_begin(&txn, ts);
+        transaction_begin(&txn, ts);
 
-    s_key key;
-    key_init("test", ts, &key);
+        s_key key;
+        char buff[256];
+        //init buff with the value of pthread_self()
 
-    s_value val;
-    u_value uval;
-    uval.u64 = rand();
-    value_init(uval, U64, &val);
+        snprintf(buff, 255, "%lu%d", pthread_self(),rand());
 
-    transaction_insert(&txn, &key, &val);    
-    transaction_commit(&txn);
+        key_init(buff, ts, &key);
 
-    for(uint32_t i = 0 ; i < 16 ; i++){
-        printf("thread %lu inserted %lu \n", pthread_self(), val.val.u64);
-        sleep(1);
+        s_value val;
+        u_value uval;
+        if(i%2){
+            char buff2[256];
+            snprintf(buff2, 255, "test%d%d",i,rand());
+            uval.str = strdup(buff2);
+            value_init(uval, STR, &val);
+        }else{
+            uval.u64 = i;
+            value_init(uval, U64, &val);
+        }
+
+        transaction_insert(&txn, &key, &val);  
+        transaction_commit(&txn);
+
+        if(i%2){
+            printf("thread %lu inserted %s \n", pthread_self(), val.val.str);
+        }else{
+            printf("thread %lu inserted %lu \n", pthread_self(), val.val.u64);
+        }
+        //sleep(1);
         journal_add(journal, &txn);
-    }
+    
 
-    transaction_free(&txn);
-    value_free(&val);
-    key_free(&key);
+        transaction_free(&txn);
+        value_free(&val);
+        key_free(&key);
+
+        s_key key2;
+        get_timestamp(tsgen, &ts);
+        key_init(buff, ts, &key2);
+
+        s_value value2;
+
+        journal_lookup(journal, &key2, &value2);
+        value_print(&value2);
+
+    }
 
     return NULL;
 }
 
 int main(void){
+    srand(time(NULL));
     
     s_journal journal;
     journal_init(128, &journal);

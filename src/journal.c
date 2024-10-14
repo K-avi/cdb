@@ -4,6 +4,7 @@
 #include "key.h"
 #include "timestamp.h"
 #include "transaction.h"
+#include "value.h"
 
 #include <pthread.h>
 #include <stdint.h>
@@ -93,8 +94,8 @@ errflag_t journal_add(s_journal *journal, s_transaction* transaction){
     def_err_handler(!journal, "journal_add journal", ERR_NULL);
     def_err_handler(!transaction, "journal_add entry", ERR_NULL);
 
-    def_err_handler(!transaction->kvp_array.kvp_array, "journal_add entry size", ERR_VALS);
-    def_err_handler(transaction->kvp_array.cur_size > glob_page_size, "journal_add size too large", ERR_VALS);
+    def_err_handler(!transaction->txn_array.txn_array, "journal_add entry size", ERR_VALS);
+    def_err_handler(transaction->txn_array.cur_size > glob_page_size, "journal_add size too large", ERR_VALS);
 
     pthread_mutex_lock(&journal->lock_current_page);
 
@@ -200,16 +201,19 @@ static errflag_t init_barray(s_byte_array* barray, size_t max){
     return ERR_OK;
 }
 
+#ifdef debug
+static void journal_page_print(s_journal_page *page);
+#endif
+
 errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
    
     errflag_t failure; 
-
     s_journal_page *current = journal->current_page;
 
     //only need to lock the current page because the filled pages / next pages are read only
     pthread_mutex_lock(&journal->lock_current_page);
 
-    if(current->metadata->end_time < key->ts){
+    if(current->metadata->start_time > key->ts){
         //if the key is newer than the current page, it's not in the journal
         pthread_mutex_unlock(&journal->lock_current_page);
         value_ret = NULL;
@@ -218,14 +222,14 @@ errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
     const uint8_t* found = sub_mem(current->entries, key->key, current->used, key->key_size);
     if(found){
         s_byte_array value_barray; 
-        value_barray.data = (uint8_t*)found + key_get_barray_size(key);
-
+        value_barray.data = (uint8_t*)found + key->key_size;
         //this could be wrong tbh
-        
+
+        value_barray.cur = sizeof(value_as) + sizeof(timestamp_t) + sizeof(uint32_t);
+
         failure = value_from_byte_array(value_ret, &key->ts,&value_barray);
         pthread_mutex_unlock(&journal->lock_current_page);
         def_err_handler(failure, "journal_lookup value_from_byte_array", failure);
-        
         return ERR_OK;
     }
     current = current->next;// do this before unlocking to avoid another thread overwritting next
@@ -236,25 +240,23 @@ errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
     while (current) {
         if(current->metadata->end_time < key->ts){
         //if ts is higher than the end time of the page, the key is not in the journal
-            value_ret = NULL;
+            value_ret->as = UNKNOWKN;
             return ERR_OK;
         }
         found = sub_mem(current->entries, key->key, current->used, key->key_size);
         if(found){
             s_byte_array value_barray; 
-            value_barray.data = (uint8_t*)found + key_get_barray_size(key);
+            value_barray.data = (uint8_t*)found + key->key_size;
             //this could be wrong tbh
             
+
             failure = value_from_byte_array(value_ret, &key->ts,&value_barray);
             def_err_handler(failure, "journal_lookup value_from_byte_array", failure);
-            
             return ERR_OK;
         }
         current = current->next;
     }
-    
-    value_ret = NULL;
-    
+    value_ret->as = UNKNOWKN;
     return ERR_OK;
 }//not tested; very likely to be wrong ; doesn't support bloom filter yet
 //doesn't take journal files into account yet
@@ -300,6 +302,20 @@ static void journal_page_print(s_journal_page *page){
         printf("next: %p\n", (void*)page->next);
         printf("metadata: %p\n", (void*)page->metadata);
         printf("entries: %p\n", (void*)page->entries);
+
+        for(uint32_t i = 0 ; i < page->used ; i++){
+            printf("%c", page->entries[i]);
+            //if(i % 16 == 15) printf("\n");
+
+        }
+        printf("\n");
+
+        for(uint32_t i = 0 ; i < page->used ; i++){
+            printf("%x ", page->entries[i]);
+            //if(i % 16 == 15) printf("\n");
+
+        }
+        printf("\n");
     }
     return;
 }//not done 

@@ -247,7 +247,7 @@ static errflag_t init_barray(s_byte_array* barray, size_t max){
     return ERR_OK;
 }
 
-static inline errflag_t txn_dynarr_append_kvp(s_txn_dynarr* txn_dynarr, s_key* key, s_value* value){
+static errflag_t txn_dynarr_append_kvp(s_txn_dynarr* txn_dynarr, s_key* key, s_value* value){
 
     //I should support a way to write the key and value to the transaction array as well
     //I will have to be careful. It shouldn't be hard (it's writing to a byte array after all) 
@@ -263,6 +263,7 @@ static inline errflag_t txn_dynarr_append_kvp(s_txn_dynarr* txn_dynarr, s_key* k
     errflag_t failure = key_to_byte_array(key, &barray);
     def_err_handler(failure, "txn_dynarr_append_kvp key_to_byte_array", failure);
 
+
     failure = value_to_byte_array(value, &key->ts, &barray);
     def_err_handler(failure, "txn_dynarr_append_kvp value_to_byte_array", failure);
 
@@ -274,14 +275,15 @@ static inline errflag_t txn_dynarr_append_kvp(s_txn_dynarr* txn_dynarr, s_key* k
     return ERR_OK;
 }
 
-static inline errflag_t txn_dynnar_append_key(s_txn_dynarr* txn_dynarr, s_key* key){
+static errflag_t txn_dynnar_append_key(s_txn_dynarr* txn_dynarr, s_key* key){
     
     s_byte_array barray ; 
     init_barray(&barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) ); //key size   
 
     errflag_t failure = key_to_byte_array(key, &barray);
     def_err_handler(failure, "txn_dynarr_append_key key_to_byte_array", failure);
-    
+
+
     failure = txn_dynarr_copy(txn_dynarr, barray.data, barray.cur);
     def_err_handler(failure, "txn_dynarr_append_key txn_dynarr_copy", failure);
 
