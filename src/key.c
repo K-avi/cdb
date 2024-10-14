@@ -85,9 +85,8 @@ errflag_t key_to_byte_array(s_key* key, s_byte_array* byte_array){
 
     return ERR_OK;
 }// tested; seems ok
-/*
-WRONG WHAT IF THE BYTE ARRAY IS NOT EMPTY YOU DIMWIT 
-*/
+
+
 
 errflag_t key_from_byte_array(s_key* key, s_byte_array* byte_array, uint32_t offset){
     def_err_handler(!key, "key_from_byte_array key", ERR_NULL);

@@ -69,6 +69,9 @@ typedef struct s_transaction{
     s_txn_dynarr txn_array;
     s_kvp_dynarr kvp_array;
 
+    timestamp_t start_time;
+    timestamp_t end_time;
+
     uint32_t txn_id;
 
     uint8_t flags; //flags allow to ensure that the transaction is in a valid state (no operation after commit/abort or before begin)
@@ -77,6 +80,7 @@ typedef struct s_transaction{
     b1 -> commit
     b2 -> abort
     */
+    
 }s_transaction; 
 
 errflag_t transaction_init(s_transaction* txn);

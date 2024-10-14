@@ -1,6 +1,8 @@
 #include "journal.h"
 #include "common.h"
 #include "err_handler.h"
+#include "key.h"
+#include "timestamp.h"
 #include "transaction.h"
 
 #include <pthread.h>
@@ -12,6 +14,12 @@
 uint32_t glob_page_size = DEFAULT_PAGE_SIZE;
 
 #define JOURNAL_FILE_SIGNATRUE 0x6976616e00 //it's me in hex :)
+
+#define init_metadata(page,num,size,start,end) \
+   {(page)->metadata->page_number = (num); \
+    (page)->metadata->page_size = (size); \
+    (page)->metadata->start_time = (start); \
+    (page)->metadata->end_time = (end);}
 
 static errflag_t journal_page_init(uint32_t page_size, s_journal_page *page){
     def_err_handler(!page, "journal_page_init page", ERR_NULL);
@@ -53,6 +61,9 @@ errflag_t journal_init (uint32_t page_size, s_journal *journal){
     error_handler(failure, "journal_init journal_page_init", failure, free(journal->current_page););
 
     journal->first_page = journal->current_page;
+
+    init_metadata(journal->first_page,0,page_size, TIMESTAMP_MAX, 0);
+
     journal->page_size = page_size;
     journal->filled_pages = NULL;
     pthread_mutex_init(&journal->lock_current_page,NULL);
@@ -78,17 +89,18 @@ static errflag_t journal_full_pages_append(s_journal *journal, s_journal_page *f
 //I want the oldest full page first bc they 
 //should be the ones written to disk first
 
-errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
+errflag_t journal_add(s_journal *journal, s_transaction* transaction){
     def_err_handler(!journal, "journal_add journal", ERR_NULL);
-    def_err_handler(!entry, "journal_add entry", ERR_NULL);
+    def_err_handler(!transaction, "journal_add entry", ERR_NULL);
 
-    def_err_handler(!entry->size, "journal_add entry size", ERR_VALS);
-    def_err_handler(entry->size > glob_page_size, "journal_add size too large", ERR_VALS);
+    def_err_handler(!transaction->kvp_array.kvp_array, "journal_add entry size", ERR_VALS);
+    def_err_handler(transaction->kvp_array.cur_size > glob_page_size, "journal_add size too large", ERR_VALS);
 
     pthread_mutex_lock(&journal->lock_current_page);
 
     s_journal_page *current_page = journal->current_page;
-    if(current_page->used + entry->size > current_page->size){
+
+    if(current_page->used + transaction->txn_array.cur_size > current_page->size){
         s_journal_page *new_page = malloc(sizeof(s_journal_page));
         error_handler(!new_page, "journal_add new_page", ERR_ALLOC, pthread_mutex_unlock(&journal->lock_current_page););
 
@@ -101,12 +113,24 @@ errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
         journal_full_pages_append(journal, current_page);
 
         current_page->next = new_page;
+        error_handler(!new_page->metadata, "journal_add new_page metadata", ERR_ALLOC, free(new_page); pthread_mutex_unlock(&journal->lock_current_page););
+
+        init_metadata(new_page, current_page->metadata->page_number + 1, journal->page_size, 0, 0);
+
         journal->current_page = new_page;
         current_page = new_page;
     }
 
-    memcpy(&(current_page->entries[current_page->used]), entry->data, entry->size);
-    current_page->used += entry->size;
+    memcpy(&(current_page->entries[current_page->used]), transaction->txn_array.txn_array, transaction->txn_array.cur_size);
+    current_page->used += transaction->txn_array.cur_size;
+
+    //update metadata
+    if(transaction->start_time < current_page->metadata->start_time){
+        current_page->metadata->start_time = transaction->start_time;
+    }
+    if(transaction->end_time > current_page->metadata->end_time){
+        current_page->metadata->end_time = transaction->end_time;
+    }
 
     pthread_mutex_unlock(&journal->lock_current_page);
     return ERR_OK;
@@ -114,9 +138,7 @@ errflag_t journal_add(s_journal *journal, s_journal_entry *entry){
 //doesnt support adding entries that are larger than the page size
 //adds an entry to the current page, if the entry is too large for the current page, it will create a new page and add the entry to that pageA
 //One way to handle huge entries would be to just allocate them a huge ass pagge 
-//the metadata is not updated in this function 
-//this is wrong.
-//It should take a transaction tbh
+
 
 static void journal_page_free(s_journal_page *page){
     if(page){
@@ -179,13 +201,9 @@ static errflag_t init_barray(s_byte_array* barray, size_t max){
 }
 
 errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
-
-    s_byte_array key_barray ;
-    init_barray(&key_barray, key->key_size + sizeof(timestamp_t) + sizeof(uint32_t) );
-
-    errflag_t failure = key_to_byte_array(key, &key_barray);
-    def_err_handler(failure, "transaction_lookup key_to_byte_array", failure);
    
+    errflag_t failure; 
+
     s_journal_page *current = journal->current_page;
 
     //only need to lock the current page because the filled pages / next pages are read only
@@ -197,14 +215,14 @@ errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
         value_ret = NULL;
         return ERR_OK;
     }
-    const uint8_t* found = sub_mem(current->entries, key_barray.data, current->used, key_barray.cur);
+    const uint8_t* found = sub_mem(current->entries, key->key, current->used, key->key_size);
     if(found){
         s_byte_array value_barray; 
-        value_barray.data = (uint8_t*)found + key_barray.cur;
+        value_barray.data = (uint8_t*)found + key_get_barray_size(key);
+
         //this could be wrong tbh
         
         failure = value_from_byte_array(value_ret, &key->ts,&value_barray);
-        free(key_barray.data);
         pthread_mutex_unlock(&journal->lock_current_page);
         def_err_handler(failure, "journal_lookup value_from_byte_array", failure);
         
@@ -219,17 +237,15 @@ errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
         if(current->metadata->end_time < key->ts){
         //if ts is higher than the end time of the page, the key is not in the journal
             value_ret = NULL;
-            free(key_barray.data);
             return ERR_OK;
         }
-        found = sub_mem(current->entries, key_barray.data, current->used, key_barray.cur);
+        found = sub_mem(current->entries, key->key, current->used, key->key_size);
         if(found){
             s_byte_array value_barray; 
-            value_barray.data = (uint8_t*)found + key_barray.cur;
+            value_barray.data = (uint8_t*)found + key_get_barray_size(key);
             //this could be wrong tbh
             
             failure = value_from_byte_array(value_ret, &key->ts,&value_barray);
-            free(key_barray.data);
             def_err_handler(failure, "journal_lookup value_from_byte_array", failure);
             
             return ERR_OK;
@@ -238,7 +254,6 @@ errflag_t journal_lookup(s_journal *journal, s_key *key, s_value *value_ret){
     }
     
     value_ret = NULL;
-    free(key_barray.data);
     
     return ERR_OK;
 }//not tested; very likely to be wrong ; doesn't support bloom filter yet

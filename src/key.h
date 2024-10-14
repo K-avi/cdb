@@ -86,6 +86,9 @@ the key entry, the offset is the start of the key entry in the byte array->data 
 
 */
 
+#define key_get_barray_size(key) ((key)->key_size + sizeof(timestamp_t) + sizeof(uint32_t));
+
+
 #ifdef debug 
 void key_print(s_key *key);
 #endif

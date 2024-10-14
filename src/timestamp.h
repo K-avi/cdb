@@ -6,6 +6,7 @@
 
 
 typedef uint64_t timestamp_t;
+#define TIMESTAMP_MAX UINT64_MAX
 
 typedef struct s_timestamp_generator{
     _Atomic timestamp_t current_time;

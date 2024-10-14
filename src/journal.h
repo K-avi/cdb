@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "key.h"
 #include "timestamp.h"
+#include "transaction.h"
 #include "value.h"
 /*
 a journal will be an in memory array 
@@ -73,7 +74,7 @@ errflag_t journal_init(uint32_t page_size, s_journal *journal);
 for the journal and it's first page 
 */
 
-errflag_t journal_add(s_journal *journal, s_journal_entry *entry);
+errflag_t journal_add(s_journal *journal, s_transaction *transaction);
 /*
 @param: journal -> non null ; initialized the journal that will receive the data
 @param: data -> non null ; the data to add to the journal

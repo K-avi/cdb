@@ -1,6 +1,7 @@
-THE JOURNAL SHOULD BE READ FROM FINISH TO START U DUMB FUCK THIS IS NOT CORRECT FFS
+the journal implem is messy to say the least. 
+Will refactor it in a cleaner way to support transaction insert (which is simpler imo)
 
-WHY DOES THE JOURNAL USES TAIL INSERT WHAT IS WRONG W me
+
 Tests : 
     - tested map; might require more testing idk
 
@@ -24,9 +25,9 @@ Implementation :
          
     Not done : 
         - journal
-        - transaction 
-
+        - map should support transaction insert 
         - composition 
+        - make the api of the map and journal equivalent in order to be able to implement the composition 
 
 
 Optimisations : 
@@ -36,6 +37,11 @@ Optimisations :
             - I really need a custom allocator ffs 
      - better bucket implementations for the map (linked lists are bad )
      - better locking policy in the map 
+
+
+Future stuff that might be added : 
+
+    - python lib ffi in order to manipulate journals and map 
 
 Details : 
     - cleanup functions names / returns (free functions should return void; every function should start with the structure on which it operates...)

@@ -2,6 +2,7 @@
 #include "common.h"
 #include "err_handler.h"
 #include "key.h"
+#include "timestamp.h"
 #include "value.h"
 #include <stdint.h>
 #include <stdlib.h>
@@ -158,7 +159,11 @@ errflag_t transaction_init(s_transaction* txn){
     failure = txn_dynarr_init(&txn->txn_array, glob_txn_dynarr_size);
     error_handler(failure, "transaction_init txn_dynarr_init", failure, return failure;);
 
+    txn->start_time = TIMESTAMP_MAX;
+    txn->end_time = 0;
+
     txn->flags = 0;
+
 
     return ERR_OK;
 }//tested;ok
@@ -304,6 +309,13 @@ errflag_t transaction_insert(s_transaction* txn, s_key* key, s_value* value){
 
     failure = txn_dynarr_append_kvp(&txn->txn_array, key, value);
     def_err_handler(failure, "append_kvp_txndynarr", failure);
+
+    //update the start and end time of the transaction
+    //if need be
+    if(key->ts > txn->end_time)
+        txn->end_time = key->ts;
+    if(key->ts < txn->start_time)
+        txn->start_time = key->ts;
 
     return ERR_OK;
 }//done; seems to work 
